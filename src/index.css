@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: #3b82f6;
+    --primary-dark: #2563eb;
+    --accent: #60a5fa;
+    --background: #05070b;
+    --surface-dark: #05070b;
+    --text: #f4f7fb;
+    --text-muted: #c8d4e6;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  body {
+    @apply m-0 min-h-svh bg-background font-sans antialiased;
+    color: #f4f7fb;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  span,
+  li,
+  td,
+  th,
+  a,
+  input,
+  textarea,
+  select,
+  button,
+  label,
+  legend,
+  option {
+    color: #f4f7fb;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #c8d4e6;
+    opacity: 1;
+  }
+
+  #root {
+    min-height: 100svh;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-semibold tracking-tight;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  .app-shell {
+    position: relative;
+    isolation: isolate;
+    min-height: 100svh;
+    background: #05070b;
+  }
+
+  .app-shell::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(900px 520px at 8% -8%, rgba(59, 130, 246, 0.24), transparent 58%),
+      radial-gradient(720px 420px at 92% 6%, rgba(37, 99, 235, 0.16), transparent 52%),
+      radial-gradient(640px 380px at 50% 108%, rgba(59, 130, 246, 0.12), transparent 55%),
+      #05070b;
+  }
+
+  .glass {
+    color: #f4f7fb;
+    background: rgba(12, 16, 28, 0.62);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border: 1px solid rgba(96, 165, 250, 0.22);
+    box-shadow: 0 10px 40px -18px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .glass-soft {
+    color: #f4f7fb;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(96, 165, 250, 0.22);
+  }
+}
+
+@layer utilities {
+  .section-title {
+    @apply text-xs font-medium uppercase tracking-[0.12em] text-white/70;
+  }
+
+  .text-foreground {
+    color: #f4f7fb !important;
+  }
+
+  .text-muted-foreground {
+    color: #d7e0ee !important;
+  }
+}
+
+tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #f4f7fb;
+}
