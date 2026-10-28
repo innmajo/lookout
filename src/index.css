@@ -3,50 +3,75 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --primary: #3b82f6;
-    --primary-dark: #2563eb;
-    --accent: #60a5fa;
-    --background: #05070b;
-    --surface-dark: #05070b;
-    --text: #f4f7fb;
-    --text-muted: #c8d4e6;
+  :root,
+  html[data-theme='dark'] {
+    --primary: 59 130 246;
+    --primary-dark: 37 99 235;
+    --accent: 96 165 250;
+    --background: 5 7 11;
+    --foreground: 244 247 251;
+    --muted: 200 212 230;
+    --sidebar: 7 10 18;
+    --sidebar-muted: 200 212 230;
+    --surface: 12 16 28;
+    --border: 96 165 250;
+    --border-alpha: 0.22;
+    --ring: 59 130 246;
+    --glass-bg: rgba(12, 16, 28, 0.62);
+    --glass-soft-bg: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(96, 165, 250, 0.22);
+    --glass-shadow: 0 10px 40px -18px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    --shell-base: #05070b;
+    --shell-glow-1: rgba(59, 130, 246, 0.24);
+    --shell-glow-2: rgba(37, 99, 235, 0.16);
+    --shell-glow-3: rgba(59, 130, 246, 0.12);
+    --placeholder: 200 212 230;
+    --row-hover: rgba(255, 255, 255, 0.05);
+    --tooltip-bg: #0c101c;
+    --tooltip-text: #e8eef7;
+    --tooltip-border: rgba(96, 165, 250, 0.28);
+    --chart-grid: rgba(96, 165, 250, 0.16);
+    --chart-tick: #8b9cb3;
+    color-scheme: dark;
+  }
+
+  html[data-theme='light'] {
+    --primary: 37 99 235;
+    --primary-dark: 29 78 216;
+    --accent: 37 99 235;
+    --background: 244 246 251;
+    --foreground: 15 23 42;
+    --muted: 100 116 139;
+    --sidebar: 255 255 255;
+    --sidebar-muted: 71 85 105;
+    --surface: 255 255 255;
+    --border: 203 213 225;
+    --border-alpha: 0.9;
+    --ring: 37 99 235;
+    --glass-bg: rgba(255, 255, 255, 0.82);
+    --glass-soft-bg: rgba(255, 255, 255, 0.88);
+    --glass-border: rgba(226, 232, 240, 0.95);
+    --glass-shadow: 0 10px 40px -20px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    --shell-base: #f4f6fb;
+    --shell-glow-1: rgba(148, 163, 184, 0.28);
+    --shell-glow-2: rgba(165, 180, 252, 0.22);
+    --shell-glow-3: rgba(255, 255, 255, 0.7);
+    --placeholder: 148 163 184;
+    --row-hover: rgba(15, 23, 42, 0.04);
+    --tooltip-bg: #ffffff;
+    --tooltip-text: #0f172a;
+    --tooltip-border: rgba(203, 213, 225, 0.9);
+    --chart-grid: rgba(148, 163, 184, 0.28);
+    --chart-tick: #64748b;
+    color-scheme: light;
   }
 
   html {
     scroll-behavior: smooth;
-    color-scheme: dark;
   }
 
   body {
-    @apply m-0 min-h-svh bg-background font-sans antialiased;
-    color: #f4f7fb;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  p,
-  span,
-  li,
-  td,
-  th,
-  a,
-  input,
-  textarea,
-  select,
-  button,
-  label,
-  legend,
-  option {
-    color: #f4f7fb;
-  }
-
-  input::placeholder,
-  textarea::placeholder {
-    color: #c8d4e6;
-    opacity: 1;
+    @apply m-0 min-h-svh bg-background font-sans text-foreground antialiased;
   }
 
   #root {
@@ -56,7 +81,13 @@
   h1,
   h2,
   h3 {
-    @apply font-semibold tracking-tight;
+    @apply font-semibold tracking-tight text-foreground;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: rgb(var(--placeholder));
+    opacity: 1;
   }
 
   :focus-visible {
@@ -69,7 +100,7 @@
     position: relative;
     isolation: isolate;
     min-height: 100svh;
-    background: #05070b;
+    background: var(--shell-base);
   }
 
   .app-shell::before {
@@ -79,45 +110,36 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(900px 520px at 8% -8%, rgba(59, 130, 246, 0.24), transparent 58%),
-      radial-gradient(720px 420px at 92% 6%, rgba(37, 99, 235, 0.16), transparent 52%),
-      radial-gradient(640px 380px at 50% 108%, rgba(59, 130, 246, 0.12), transparent 55%),
-      #05070b;
+      radial-gradient(900px 520px at 8% -8%, var(--shell-glow-1), transparent 58%),
+      radial-gradient(720px 420px at 92% 6%, var(--shell-glow-2), transparent 52%),
+      radial-gradient(640px 380px at 50% 108%, var(--shell-glow-3), transparent 55%),
+      var(--shell-base);
   }
 
   .glass {
-    color: #f4f7fb;
-    background: rgba(12, 16, 28, 0.62);
+    color: rgb(var(--foreground));
+    background: var(--glass-bg);
     backdrop-filter: blur(22px);
     -webkit-backdrop-filter: blur(22px);
-    border: 1px solid rgba(96, 165, 250, 0.22);
-    box-shadow: 0 10px 40px -18px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
 
   .glass-soft {
-    color: #f4f7fb;
-    background: rgba(255, 255, 255, 0.06);
+    color: rgb(var(--foreground));
+    background: var(--glass-soft-bg);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(96, 165, 250, 0.22);
+    border: 1px solid var(--glass-border);
   }
 }
 
 @layer utilities {
   .section-title {
-    @apply text-xs font-medium uppercase tracking-[0.12em] text-white/70;
-  }
-
-  .text-foreground {
-    color: #f4f7fb !important;
-  }
-
-  .text-muted-foreground {
-    color: #d7e0ee !important;
+    @apply text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground;
   }
 }
 
 tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #f4f7fb;
+  background-color: var(--row-hover);
 }

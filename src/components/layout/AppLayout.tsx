@@ -1,6 +1,7 @@
 import { BarChart3, ClipboardList, FileText, Menu, Settings, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
 import { usePestelStore } from '@/store/usePestelStore'
@@ -21,7 +22,7 @@ function Logo() {
         className="h-8 w-8 rounded-lg object-cover shadow-glow"
       />
       <div className="leading-tight">
-        <p className="text-[15px] font-semibold text-white">Lookout</p>
+        <p className="text-[15px] font-semibold text-foreground">Lookout</p>
         <p className="text-[11px] text-sidebar-muted">Análisis PESTEL</p>
       </div>
     </div>
@@ -42,8 +43,8 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
               cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-primary/20 text-white shadow-glow'
-                  : 'text-sidebar-muted hover:bg-white/5 hover:text-white',
+                  ? 'bg-primary/20 text-foreground shadow-glow'
+                  : 'text-sidebar-muted hover:bg-foreground/5 hover:text-foreground',
               )
             }
           >
@@ -74,23 +75,29 @@ export function AppLayout() {
         <div className="mt-8 flex-1">
           <NavItems />
         </div>
-        <p className="text-[11px] leading-relaxed text-sidebar-muted">
-          Los datos se guardan solo en este navegador.
-        </p>
+        <div className="space-y-3">
+          <ThemeToggle />
+          <p className="text-[11px] leading-relaxed text-sidebar-muted">
+            Los datos se guardan solo en este navegador.
+          </p>
+        </div>
       </aside>
 
       <div className="min-w-0 flex-1">
         <header className="glass sticky top-0 z-40 flex items-center justify-between rounded-none border-x-0 border-t-0 px-4 py-3 lg:hidden">
           <Logo />
-          <button
-            type="button"
-            className="rounded-lg p-2 text-white hover:bg-white/10"
-            aria-label={abierto ? 'Cerrar menú' : 'Abrir menú'}
-            aria-expanded={abierto}
-            onClick={() => setAbierto((v) => !v)}
-          >
-            {abierto ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              type="button"
+              className="rounded-lg p-2 text-foreground hover:bg-foreground/10"
+              aria-label={abierto ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={abierto}
+              onClick={() => setAbierto((v) => !v)}
+            >
+              {abierto ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </header>
 
         {abierto ? (
@@ -110,7 +117,7 @@ export function AppLayout() {
               role="status"
               className="glass mb-6 rounded-xl px-4 py-3 text-sm text-accent"
             >
-              Está viendo <strong className="text-white">datos de ejemplo</strong>. Puede editarlos,
+              Está viendo <strong className="text-foreground">datos de ejemplo</strong>. Puede editarlos,
               eliminarlos o cargarlos de nuevo desde Configuración.
             </div>
           ) : null}

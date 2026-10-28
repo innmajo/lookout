@@ -94,10 +94,10 @@ export function Reportes() {
         <Card className="overflow-hidden">
           <div className="border-b border-border bg-primary/10 px-6 py-8">
             <p className="text-sm font-medium text-accent">{APP_NAME}</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
               Informe de análisis PESTEL
             </h2>
-            <p className="mt-2 text-sm text-white/80">Fecha de generación: {fechaLarga()}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Fecha de generación: {fechaLarga()}</p>
           </div>
           <CardContent className="grid gap-4 p-6 sm:grid-cols-4">
             <MiniKpi label="Factores" valor={kpis.total} />
@@ -113,7 +113,7 @@ export function Reportes() {
           </CardHeader>
           <CardContent className="space-y-2">
             {insights.map((texto) => (
-              <p key={texto} className="text-sm leading-relaxed text-white">
+              <p key={texto} className="text-sm leading-relaxed text-foreground">
                 {texto}
               </p>
             ))}
@@ -157,7 +157,7 @@ export function Reportes() {
           </CardHeader>
           <CardContent>
             {criticos.length === 0 ? (
-              <p className="text-sm text-white/80">No hay factores críticos.</p>
+              <p className="text-sm text-muted-foreground">No hay factores críticos.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -237,8 +237,8 @@ export function Reportes() {
 function Encabezado() {
   return (
     <header>
-      <h1 className="text-2xl text-white">Reportes</h1>
-      <p className="mt-1 text-sm text-white/75">
+      <h1 className="text-2xl text-foreground">Reportes</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
         Vista previa del informe y descarga en PDF, Excel o CSV.
       </p>
     </header>

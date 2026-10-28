@@ -1,5 +1,6 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { CATEGORIA_META } from '@/lib/constants'
+import { useChartTheme } from '@/lib/chartTheme'
 import type { SerieEntorno } from '@/lib/analytics'
 
 interface DonaCategoriasProps {
@@ -7,6 +8,7 @@ interface DonaCategoriasProps {
 }
 
 export function DonaCategorias({ data }: DonaCategoriasProps) {
+  const chart = useChartTheme()
   const dona = data.filter((d) => d.total > 0).map((d) => ({ name: d.categoria, value: d.total }))
 
   return (
@@ -33,13 +35,13 @@ export function DonaCategorias({ data }: DonaCategoriasProps) {
           <Tooltip
             contentStyle={{
               borderRadius: 12,
-              borderColor: 'rgba(96,165,250,0.28)',
-              background: '#0C101C',
-              color: '#E8EEF7',
+              borderColor: chart.tooltipBorder,
+              background: chart.tooltipBg,
+              color: chart.tooltipText,
               fontFamily: 'Inter',
             }}
           />
-          <Legend wrapperStyle={{ color: '#E8EEF7' }} />
+          <Legend wrapperStyle={{ color: chart.tooltipText }} />
         </PieChart>
       </ResponsiveContainer>
     </div>

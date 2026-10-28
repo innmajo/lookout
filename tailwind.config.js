@@ -5,45 +5,45 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#3B82F6',
-          dark: '#2563EB',
+          DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
+          dark: 'rgb(var(--primary-dark) / <alpha-value>)',
           foreground: '#FFFFFF',
         },
         accent: {
-          DEFAULT: '#60A5FA',
-          foreground: '#E8EEF7',
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          foreground: 'rgb(var(--foreground) / <alpha-value>)',
         },
-        background: '#05070B',
+        background: 'rgb(var(--background) / <alpha-value>)',
         surface: {
-          DEFAULT: '#0C101C',
-          dark: '#05070B',
+          DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
+          dark: 'rgb(var(--background) / <alpha-value>)',
         },
         sidebar: {
-          DEFAULT: '#070A12',
-          muted: '#C8D4E6',
+          DEFAULT: 'rgb(var(--sidebar) / <alpha-value>)',
+          muted: 'rgb(var(--sidebar-muted) / <alpha-value>)',
         },
-        foreground: '#F4F7FB',
+        foreground: 'rgb(var(--foreground) / <alpha-value>)',
         muted: {
-          DEFAULT: 'rgba(255,255,255,0.08)',
-          foreground: '#C8D4E6',
+          DEFAULT: 'rgb(var(--foreground) / 0.06)',
+          foreground: 'rgb(var(--muted) / <alpha-value>)',
         },
-        critico: '#FB7185',
-        atencion: '#FBBF24',
-        monitorear: '#34D399',
-        border: 'rgba(96,165,250,0.22)',
-        ring: '#3B82F6',
+        critico: '#E11D48',
+        atencion: '#D97706',
+        monitorear: '#059669',
+        border: 'rgb(var(--border) / var(--border-alpha))',
+        ring: 'rgb(var(--ring) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        card: '0 10px 40px -18px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.06)',
-        glow: '0 0 0 1px rgba(96,165,250,0.18), 0 12px 40px -16px rgba(59,130,246,0.45)',
+        card: 'var(--glass-shadow)',
+        glow: '0 0 0 1px rgb(var(--primary) / 0.18), 0 12px 40px -16px rgb(var(--primary) / 0.45)',
       },
       keyframes: {
         'pulse-ring': {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(251, 113, 133, 0.45)' },
-          '50%': { boxShadow: '0 0 0 8px rgba(251, 113, 133, 0)' },
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(225, 29, 72, 0.45)' },
+          '50%': { boxShadow: '0 0 0 8px rgba(225, 29, 72, 0)' },
         },
       },
       animation: {

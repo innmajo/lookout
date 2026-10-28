@@ -101,8 +101,8 @@ export function Registro() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <header>
-        <h1 className="text-2xl text-white">Registro</h1>
-        <p className="mt-1 text-sm text-white/75">
+        <h1 className="text-2xl text-foreground">Registro</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Documente amenazas y oportunidades del entorno. Todos los campos son obligatorios.
         </p>
       </header>
@@ -185,7 +185,7 @@ export function Registro() {
           </div>
 
           {filtrados.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-white/80">
+            <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
               {factores.length === 0
                 ? 'No hay registros todavía. Complete el formulario de arriba o cargue datos de ejemplo.'
                 : 'Ningún factor coincide con la búsqueda o los filtros.'}

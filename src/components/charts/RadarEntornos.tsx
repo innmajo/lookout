@@ -9,6 +9,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { COLOR_AMENAZA, COLOR_OPORTUNIDAD } from '@/lib/constants'
+import { useChartTheme } from '@/lib/chartTheme'
 import type { SerieEntorno } from '@/lib/analytics'
 
 interface RadarEntornosProps {
@@ -17,23 +18,25 @@ interface RadarEntornosProps {
 }
 
 export function RadarEntornos({ data, id = 'chart-radar' }: RadarEntornosProps) {
+  const chart = useChartTheme()
+
   return (
     <div id={id} className="h-[320px] w-full bg-transparent">
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data}>
-          <PolarGrid stroke="rgba(96,165,250,0.2)" />
-          <PolarAngleAxis dataKey="categoria" tick={{ fill: '#8B9CB3', fontSize: 12 }} />
-          <PolarRadiusAxis allowDecimals={false} tick={{ fill: '#8B9CB3', fontSize: 10 }} />
+          <PolarGrid stroke={chart.grid} />
+          <PolarAngleAxis dataKey="categoria" tick={{ fill: chart.tick, fontSize: 12 }} />
+          <PolarRadiusAxis allowDecimals={false} tick={{ fill: chart.tick, fontSize: 10 }} />
           <Tooltip
             contentStyle={{
               borderRadius: 12,
-              borderColor: 'rgba(96,165,250,0.28)',
-              background: '#0C101C',
-              color: '#E8EEF7',
+              borderColor: chart.tooltipBorder,
+              background: chart.tooltipBg,
+              color: chart.tooltipText,
               fontFamily: 'Inter',
             }}
           />
-          <Legend wrapperStyle={{ color: '#E8EEF7' }} />
+          <Legend wrapperStyle={{ color: chart.tooltipText }} />
           <Radar
             name="Amenazas"
             dataKey="amenazas"

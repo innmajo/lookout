@@ -23,8 +23,8 @@ export function Configuracion() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header>
-        <h1 className="text-2xl text-white">Configuración</h1>
-        <p className="mt-1 text-sm text-white/75">
+        <h1 className="text-2xl text-foreground">Configuración</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Los registros se guardan solo en este navegador (localStorage). No hay servidor.
         </p>
       </header>

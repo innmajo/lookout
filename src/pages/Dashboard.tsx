@@ -92,7 +92,7 @@ export function Dashboard() {
             {insights.map((texto) => (
               <p
                 key={texto}
-                className="glass-soft rounded-xl px-4 py-3 text-sm leading-relaxed text-white"
+                className="glass-soft rounded-xl px-4 py-3 text-sm leading-relaxed text-foreground"
               >
                 {resaltarEntornos(texto)}
               </p>
@@ -103,7 +103,7 @@ export function Dashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Matriz de priorización</CardTitle>
+          <CardTitle>Matriz de Riesgos</CardTitle>
           <CardDescription>
             Filas: impacto (alto arriba). Columnas: plazo (corto a la izquierda). Pulse una celda para ver los factores.
           </CardDescription>
@@ -120,7 +120,7 @@ export function Dashboard() {
         </CardHeader>
         <CardContent>
           {criticos.length === 0 ? (
-            <p className="text-sm text-white/80">No hay alertas urgentes en este momento.</p>
+            <p className="text-sm text-muted-foreground">No hay alertas urgentes en este momento.</p>
           ) : (
             <ul className="space-y-3">
               {criticos.map((factor) => {
@@ -144,7 +144,7 @@ export function Dashboard() {
                         </Badge>
                         <SemaforoBadge factor={factor} />
                       </div>
-                      <p className="text-sm text-white">{factor.descripcion}</p>
+                      <p className="text-sm text-foreground">{factor.descripcion}</p>
                     </div>
                   </li>
                 )
@@ -160,8 +160,8 @@ export function Dashboard() {
 function PageHeader() {
   return (
     <header className="mb-6">
-      <h1 className="text-2xl text-white">Dashboard</h1>
-      <p className="mt-1 text-sm text-white/75">
+      <h1 className="text-2xl text-foreground">Dashboard</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
         Lectura del entorno externo para priorizar decisiones.
       </p>
     </header>

@@ -103,7 +103,7 @@ export function FactorForm({
       </div>
 
       <fieldset>
-        <legend className="text-sm font-medium text-white">Tipo</legend>
+        <legend className="text-sm font-medium text-foreground">Tipo</legend>
         <Controller
           control={form.control}
           name="tipo"
@@ -115,7 +115,7 @@ export function FactorForm({
             >
               <label
                 className={cn(
-                  'flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium text-white',
+                  'flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium text-foreground',
                   field.value === 'Amenaza'
                     ? 'border-critico/60 bg-critico/20 text-critico'
                     : 'glass-soft',
@@ -126,7 +126,7 @@ export function FactorForm({
               </label>
               <label
                 className={cn(
-                  'flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium text-white',
+                  'flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium text-foreground',
                   field.value === 'Oportunidad'
                     ? 'border-monitorear/60 bg-monitorear/20 text-monitorear'
                     : 'glass-soft',
@@ -142,7 +142,7 @@ export function FactorForm({
       </fieldset>
 
       <fieldset>
-        <legend className="text-sm font-medium text-white">Impacto</legend>
+        <legend className="text-sm font-medium text-foreground">Impacto</legend>
         <Controller
           control={form.control}
           name="impacto"
@@ -156,7 +156,7 @@ export function FactorForm({
                 <label
                   key={opcion}
                   className={cn(
-                    'flex cursor-pointer items-center justify-center gap-2 rounded-xl border px-2 py-2.5 text-sm font-medium text-white',
+                    'flex cursor-pointer items-center justify-center gap-2 rounded-xl border px-2 py-2.5 text-sm font-medium text-foreground',
                     field.value === opcion ? 'border-primary bg-primary/25' : 'glass-soft',
                   )}
                 >
@@ -171,7 +171,7 @@ export function FactorForm({
       </fieldset>
 
       <fieldset>
-        <legend className="text-sm font-medium text-white">Plazo</legend>
+        <legend className="text-sm font-medium text-foreground">Plazo</legend>
         <Controller
           control={form.control}
           name="plazo"
@@ -185,7 +185,7 @@ export function FactorForm({
                 <label
                   key={opcion}
                   className={cn(
-                    'flex cursor-pointer items-center justify-center gap-2 rounded-xl border px-2 py-2.5 text-sm font-medium text-white',
+                    'flex cursor-pointer items-center justify-center gap-2 rounded-xl border px-2 py-2.5 text-sm font-medium text-foreground',
                     field.value === opcion ? 'border-primary bg-primary/25' : 'glass-soft',
                   )}
                 >
