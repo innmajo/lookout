@@ -52,8 +52,8 @@ export function TablaPesos({ sectorActivo }: { sectorActivo: SectorId }) {
           <tr className="border-b border-border text-left text-xs text-muted-foreground">
             <th className="px-3 py-2 font-medium">Sector</th>
             {CATEGORIAS.map((cat) => (
-              <th key={cat} className="px-2 py-2 text-center font-medium">
-                {cat === 'Ecológico' ? 'Amb.' : cat.slice(0, 1)}
+              <th key={cat} className="px-2 py-2 text-center font-medium" title={cat}>
+                {cat.slice(0, 1)}
               </th>
             ))}
           </tr>

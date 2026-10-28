@@ -1,4 +1,4 @@
-import { BarChart3, ClipboardList, FileText, Menu, Settings, X } from 'lucide-react'
+import { BarChart3, CircleHelp, ClipboardList, FileText, Menu, Settings, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { ThemeBubbles, ThemeContentFigures } from '@/components/layout/ThemeBubbles'
@@ -12,6 +12,7 @@ const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { to: '/registro', label: 'Registro', icon: ClipboardList },
   { to: '/reportes', label: 'Reportes', icon: FileText },
+  { to: '/informacion', label: 'Información', icon: CircleHelp },
   { to: '/configuracion', label: 'Configuración', icon: Settings },
 ]
 
