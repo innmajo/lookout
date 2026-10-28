@@ -1,3 +1,5 @@
+import type { SectorId } from '@/lib/sectores'
+
 export const CATEGORIAS = [
   'Político',
   'Económico',
@@ -27,6 +29,8 @@ export interface FactorPestel {
   tipo: Tipo
   impacto: Impacto
   plazo: Plazo
+  sector: SectorId
+  valorCOP?: number
   fechaRegistro: string
   esEjemplo?: boolean
 }
@@ -36,6 +40,7 @@ export interface Prioridad {
   nivel: NivelPrioridad
   color: string
   significado: string
+  peso: number
 }
 
 export interface FactorFormValues {
@@ -44,4 +49,6 @@ export interface FactorFormValues {
   tipo: Tipo
   impacto: Impacto
   plazo: Plazo
+  sector: SectorId
+  valorCOP?: number
 }

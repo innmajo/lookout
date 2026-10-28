@@ -28,7 +28,9 @@ import {
 } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { CATEGORIA_META } from '@/lib/constants'
+import { copAUsd, formatearCOP, formatearUSD, tieneValor } from '@/lib/dinero'
 import { calcularPrioridad } from '@/lib/prioridad'
+import { LISTA_SECTORES, SECTORES, type SectorId } from '@/lib/sectores'
 import { formatearFecha } from '@/lib/utils'
 import { usePestelStore } from '@/store/usePestelStore'
 import {
@@ -52,7 +54,9 @@ export function Registro() {
   const actualizarFactor = usePestelStore((s) => s.actualizarFactor)
   const eliminarFactor = usePestelStore((s) => s.eliminarFactor)
 
+  const trmUsd = usePestelStore((s) => s.trmUsd)
   const [busqueda, setBusqueda] = useState('')
+  const [sector, setSector] = useState<SectorId | 'todos'>('todos')
   const [categoria, setCategoria] = useState<Categoria | 'todas'>('todas')
   const [tipo, setTipo] = useState<Tipo | 'todos'>('todos')
   const [impacto, setImpacto] = useState<Impacto | 'todos'>('todos')
@@ -67,9 +71,11 @@ export function Registro() {
       const coincideTexto =
         !texto ||
         factor.descripcion.toLowerCase().includes(texto) ||
-        factor.categoria.toLowerCase().includes(texto)
+        factor.categoria.toLowerCase().includes(texto) ||
+        SECTORES[factor.sector]?.nombre.toLowerCase().includes(texto)
       return (
         coincideTexto &&
+        (sector === 'todos' || factor.sector === sector) &&
         (categoria === 'todas' || factor.categoria === categoria) &&
         (tipo === 'todos' || factor.tipo === tipo) &&
         (impacto === 'todos' || factor.impacto === impacto) &&
@@ -84,7 +90,7 @@ export function Registro() {
       const pb = calcularPrioridad(b).puntaje
       return orden === 'prioridad-desc' ? pb - pa : pa - pb
     })
-  }, [factores, busqueda, categoria, tipo, impacto, plazo, orden])
+  }, [factores, busqueda, sector, categoria, tipo, impacto, plazo, orden])
 
   function handleCrear(values: FactorFormValues) {
     agregarFactor(values)
@@ -103,14 +109,16 @@ export function Registro() {
       <header>
         <h1 className="text-2xl text-foreground">Registro</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Documente amenazas y oportunidades del entorno. Todos los campos son obligatorios.
+          Documente amenazas y oportunidades del entorno. El valor en pesos es opcional.
         </p>
       </header>
 
       <Card>
         <CardHeader>
           <CardTitle>Nuevo factor</CardTitle>
-          <CardDescription>Amenaza u oportunidad por entorno, con impacto y plazo</CardDescription>
+          <CardDescription>
+            Incluya el sector (define el peso PESTEL) y, si puede, lo que se perdería o se ganaría.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <FactorForm key={factores.length} onSubmit={handleCrear} submitLabel="Guardar factor" />
@@ -126,6 +134,13 @@ export function Registro() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <FiltroSelect
+              id="filtro-sector"
+              label="Sector"
+              value={sector}
+              onChange={(v) => setSector(v as SectorId | 'todos')}
+              opciones={[['todos', 'Todos'], ...LISTA_SECTORES.map((s) => [s.id, s.nombre] as const)]}
+            />
             <div className="xl:col-span-2">
               <Label htmlFor="busqueda">Búsqueda</Label>
               <div className="relative mt-1.5">
@@ -194,9 +209,11 @@ export function Registro() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Sector</TableHead>
                   <TableHead>Categoría</TableHead>
                   <TableHead className="min-w-[220px]">Descripción</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead>Valor</TableHead>
                   <TableHead>Impacto</TableHead>
                   <TableHead>Plazo</TableHead>
                   <TableHead>Prioridad</TableHead>
@@ -210,6 +227,7 @@ export function Registro() {
                   const Icon = meta.icon
                   return (
                     <TableRow key={factor.id}>
+                      <TableCell className="text-xs">{SECTORES[factor.sector]?.nombre ?? factor.sector}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-2 font-bold" style={{ color: meta.color }}>
                           <Icon className="h-4 w-4" aria-hidden />
@@ -228,6 +246,18 @@ export function Registro() {
                         <Badge variant={factor.tipo === 'Amenaza' ? 'amenaza' : 'oportunidad'}>
                           {factor.tipo}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {tieneValor(factor) ? (
+                          <span>
+                            {formatearCOP(factor.valorCOP)}
+                            <span className="mt-0.5 block text-muted-foreground">
+                              {formatearUSD(copAUsd(factor.valorCOP, trmUsd))}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>{factor.impacto}</TableCell>
                       <TableCell>{factor.plazo}</TableCell>

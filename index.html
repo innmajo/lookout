@@ -12,11 +12,16 @@
         try {
           var raw = localStorage.getItem('lookout-theme')
           var tema = 'dark'
+          var sector = 'agro'
           if (raw) {
             var parsed = JSON.parse(raw)
-            if (parsed && parsed.state && parsed.state.tema === 'light') tema = 'light'
+            if (parsed && parsed.state) {
+              if (parsed.state.tema === 'light') tema = 'light'
+              if (parsed.state.sector) sector = parsed.state.sector
+            }
           }
           document.documentElement.setAttribute('data-theme', tema)
+          document.documentElement.setAttribute('data-sector', sector)
           document.documentElement.style.colorScheme = tema
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'dark')

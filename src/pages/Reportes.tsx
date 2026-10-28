@@ -17,17 +17,21 @@ import {
   resumenPorEntorno,
 } from '@/lib/analytics'
 import { APP_NAME } from '@/lib/constants'
+import { copAUsd, exposicionEconomica, formatearCOP, formatearUSD, tieneValor } from '@/lib/dinero'
 import { exportarCsv } from '@/lib/exportCsv'
 import { exportarExcel } from '@/lib/exportExcel'
 import { exportarPdf } from '@/lib/exportPdf'
+import { SECTORES } from '@/lib/sectores'
 import { fechaLarga } from '@/lib/utils'
 import { usePestelStore } from '@/store/usePestelStore'
 import { CATEGORIAS } from '@/types/pestel'
 
 export function Reportes() {
   const factores = usePestelStore((s) => s.factores)
+  const trmUsd = usePestelStore((s) => s.trmUsd)
   const [exportando, setExportando] = useState(false)
   const kpis = calcularKpis(factores)
+  const dinero = exposicionEconomica(factores)
   const insights = generarInsights(factores)
   const criticos = factoresCriticos(factores)
   const resumen = resumenPorEntorno(factores)
@@ -99,11 +103,20 @@ export function Reportes() {
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">Fecha de generación: {fechaLarga()}</p>
           </div>
-          <CardContent className="grid gap-4 p-6 sm:grid-cols-4">
+          <CardContent className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3">
             <MiniKpi label="Factores" valor={kpis.total} />
             <MiniKpi label="Amenazas" valor={kpis.amenazas} />
             <MiniKpi label="Oportunidades" valor={kpis.oportunidades} />
             <MiniKpi label="Críticos" valor={kpis.criticos} alerta />
+            <MiniKpi
+              label="En riesgo"
+              valor={dinero.conValor === 0 ? 'Sin valores' : formatearCOP(dinero.enRiesgoCOP)}
+              alerta
+            />
+            <MiniKpi
+              label="Por ganar"
+              valor={dinero.conValor === 0 ? 'Sin valores' : formatearCOP(dinero.porGanarCOP)}
+            />
           </CardContent>
         </Card>
 
@@ -153,7 +166,7 @@ export function Reportes() {
         <Card className="border-critico/40">
           <CardHeader>
             <CardTitle className="text-critico">Factores críticos</CardTitle>
-            <CardDescription>Alto impacto y corto plazo</CardDescription>
+            <CardDescription>Semáforo CRÍTICO ponderado por el peso del sector</CardDescription>
           </CardHeader>
           <CardContent>
             {criticos.length === 0 ? (
@@ -162,15 +175,18 @@ export function Reportes() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Sector</TableHead>
                     <TableHead>Categoría</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Descripción</TableHead>
+                    <TableHead>Valor</TableHead>
                     <TableHead>Prioridad</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {criticos.map((factor) => (
                     <TableRow key={factor.id} className="bg-critico/10">
+                      <TableCell className="text-xs">{SECTORES[factor.sector]?.nombre ?? factor.sector}</TableCell>
                       <TableCell className="font-bold">{factor.categoria}</TableCell>
                       <TableCell>
                         <Badge variant={factor.tipo === 'Amenaza' ? 'amenaza' : 'oportunidad'}>
@@ -178,6 +194,11 @@ export function Reportes() {
                         </Badge>
                       </TableCell>
                       <TableCell>{factor.descripcion}</TableCell>
+                      <TableCell className="text-xs">
+                        {tieneValor(factor)
+                          ? `${formatearCOP(factor.valorCOP)} · ${formatearUSD(copAUsd(factor.valorCOP, trmUsd))}`
+                          : '—'}
+                      </TableCell>
                       <TableCell>
                         <SemaforoBadge factor={factor} />
                       </TableCell>
@@ -203,8 +224,10 @@ export function Reportes() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Sector</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Descripción</TableHead>
+                        <TableHead>Valor</TableHead>
                         <TableHead>Impacto</TableHead>
                         <TableHead>Plazo</TableHead>
                         <TableHead>Prioridad</TableHead>
@@ -213,8 +236,14 @@ export function Reportes() {
                     <TableBody>
                       {grupo.map((factor) => (
                         <TableRow key={factor.id}>
+                          <TableCell className="text-xs">{SECTORES[factor.sector]?.nombre ?? factor.sector}</TableCell>
                           <TableCell>{factor.tipo}</TableCell>
                           <TableCell>{factor.descripcion}</TableCell>
+                          <TableCell className="text-xs">
+                            {tieneValor(factor)
+                              ? `${formatearCOP(factor.valorCOP)} · ${formatearUSD(copAUsd(factor.valorCOP, trmUsd))}`
+                              : '—'}
+                          </TableCell>
                           <TableCell>{factor.impacto}</TableCell>
                           <TableCell>{factor.plazo}</TableCell>
                           <TableCell>
@@ -245,7 +274,7 @@ function Encabezado() {
   )
 }
 
-function MiniKpi({ label, valor, alerta = false }: { label: string; valor: number; alerta?: boolean }) {
+function MiniKpi({ label, valor, alerta = false }: { label: string; valor: number | string; alerta?: boolean }) {
   return (
     <div className="glass-soft rounded-xl px-4 py-3">
       <p className="section-title">{label}</p>

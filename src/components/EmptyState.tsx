@@ -1,5 +1,6 @@
 import { Radar } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { CardOrb, IconBubble } from '@/components/IconBubble'
 import { Button } from '@/components/ui/button'
 
 interface EmptyStateProps {
@@ -10,9 +11,10 @@ interface EmptyStateProps {
 
 export function EmptyState({ titulo, descripcion, accion = true }: EmptyStateProps) {
   return (
-    <div className="glass flex flex-col items-center justify-center rounded-2xl border-dashed px-6 py-16 text-center text-foreground">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-accent shadow-glow">
-        <Radar className="h-6 w-6" aria-hidden />
+    <div className="glass relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border-dashed px-6 py-16 text-center text-foreground">
+      <CardOrb />
+      <div className="relative mb-4">
+        <IconBubble icon={Radar} className="h-14 w-14" />
       </div>
       <h2 className="text-lg text-foreground">{titulo}</h2>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">{descripcion}</p>

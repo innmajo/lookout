@@ -1,10 +1,12 @@
 import { BarChart3, ClipboardList, FileText, Menu, Settings, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { ThemeBubbles, ThemeContentFigures } from '@/components/layout/ThemeBubbles'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
 import { usePestelStore } from '@/store/usePestelStore'
+import { aplicarApariencia, useThemeStore } from '@/store/useThemeStore'
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -16,10 +18,10 @@ const NAV = [
 function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <img
+        <img
         src="/app-icon.jpg"
         alt="Lookout"
-        className="h-8 w-8 rounded-lg object-cover shadow-glow"
+        className="h-8 w-8 rounded-full object-cover ring-2 ring-primary/40 shadow-glow"
       />
       <div className="leading-tight">
         <p className="text-[15px] font-semibold text-foreground">Lookout</p>
@@ -60,9 +62,16 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 export function AppLayout() {
   const [abierto, setAbierto] = useState(false)
   const hayEjemplos = usePestelStore((s) => s.factores.some((f) => f.esEjemplo))
+  const tema = useThemeStore((s) => s.tema)
+  const sector = useThemeStore((s) => s.sector)
+
+  useEffect(() => {
+    aplicarApariencia(tema, sector)
+  }, [tema, sector])
 
   return (
     <div className="app-shell lg:flex">
+      <ThemeBubbles />
       <a
         href="#contenido"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2"
@@ -111,12 +120,14 @@ export function AppLayout() {
           </div>
         ) : null}
 
-        <main id="contenido" className="min-w-0 px-4 py-6 lg:px-8 lg:py-8">
+        <main id="contenido" className="relative min-w-0 px-4 py-6 lg:px-8 lg:py-8">
+          <ThemeContentFigures />
           {hayEjemplos ? (
             <div
               role="status"
-              className="glass mb-6 rounded-xl px-4 py-3 text-sm text-accent"
+              className="glass relative mb-6 overflow-hidden rounded-xl px-4 py-3 text-sm text-accent"
             >
+              <span className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-primary/35 blur-2xl" aria-hidden />
               Está viendo <strong className="text-foreground">datos de ejemplo</strong>. Puede editarlos,
               eliminarlos o cargarlos de nuevo desde Configuración.
             </div>

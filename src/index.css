@@ -116,6 +116,37 @@
       var(--shell-base);
   }
 
+  .icon-bubble {
+    display: flex;
+    height: 2.75rem;
+    width: 2.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    color: rgb(var(--primary));
+    background: rgb(var(--primary) / 0.18);
+    box-shadow:
+      0 0 0 1px rgb(var(--primary) / 0.28),
+      0 10px 28px -10px rgb(var(--primary) / 0.55);
+  }
+
+  .icon-bubble-critico {
+    color: rgb(225 29 72);
+    background: rgb(225 29 72 / 0.16);
+    box-shadow:
+      0 0 0 1px rgb(225 29 72 / 0.28),
+      0 10px 28px -10px rgb(225 29 72 / 0.45);
+  }
+
+  .icon-bubble-ok {
+    color: rgb(5 150 105);
+    background: rgb(5 150 105 / 0.16);
+    box-shadow:
+      0 0 0 1px rgb(5 150 105 / 0.28),
+      0 10px 28px -10px rgb(5 150 105 / 0.45);
+  }
+
   .glass {
     color: rgb(var(--foreground));
     background: var(--glass-bg);

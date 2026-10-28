@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
@@ -12,8 +13,13 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { CATEGORIA_META } from '@/lib/constants'
+import { copAUsd, formatearUSD } from '@/lib/dinero'
+import { etiquetaPeso } from '@/lib/prioridad'
 import { factorSchema, type FactorSchema } from '@/lib/schema'
+import { LISTA_SECTORES, SECTORES, esSectorId } from '@/lib/sectores'
 import { cn } from '@/lib/utils'
+import { usePestelStore } from '@/store/usePestelStore'
+import { useThemeStore } from '@/store/useThemeStore'
 import { CATEGORIAS, IMPACTOS, PLAZOS, type FactorFormValues } from '@/types/pestel'
 
 interface FactorFormProps {
@@ -38,22 +44,60 @@ export function FactorForm({
   onCancel,
   submitLabel = 'Guardar factor',
 }: FactorFormProps) {
+  const sectorOrg = useThemeStore((s) => s.sector)
+  const trmUsd = usePestelStore((s) => s.trmUsd)
   const form = useForm<FactorSchema>({
     resolver: zodResolver(factorSchema),
     defaultValues: {
+      sector: defaultValues?.sector ?? sectorOrg,
       descripcion: '',
+      valorCOP: defaultValues?.valorCOP,
       ...defaultValues,
     },
   })
 
   const descripcion = form.watch('descripcion') ?? ''
+  const tipo = form.watch('tipo')
+  const sector = form.watch('sector')
+  const categoria = form.watch('categoria')
+  const valorCOP = form.watch('valorCOP')
 
   return (
     <form
-      onSubmit={form.handleSubmit(onSubmit)}
+      onSubmit={form.handleSubmit((values) => onSubmit(values as FactorFormValues))}
       className="grid gap-5"
       noValidate
     >
+      <div>
+        <Label htmlFor="sector">Sector del factor</Label>
+        <Controller
+          control={form.control}
+          name="sector"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="sector" aria-invalid={!!form.formState.errors.sector} className="mt-1.5">
+                <SelectValue placeholder="Seleccione el sector" />
+              </SelectTrigger>
+              <SelectContent>
+                {LISTA_SECTORES.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: item.paleta.dark.primary }}
+                        aria-hidden
+                      />
+                      {item.nombre}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        <ErrorMsg mensaje={form.formState.errors.sector?.message} />
+      </div>
+
       <div>
         <Label htmlFor="categoria">Categoría</Label>
         <Controller
@@ -68,11 +112,15 @@ export function FactorForm({
                 {CATEGORIAS.map((cat) => {
                   const meta = CATEGORIA_META[cat]
                   const Icon = meta.icon
+                  const peso = esSectorId(sector) ? SECTORES[sector].pesos[cat] : undefined
                   return (
                     <SelectItem key={cat} value={cat}>
                       <span className="inline-flex items-center gap-2">
                         <Icon className="h-4 w-4" style={{ color: meta.color }} aria-hidden />
                         <span style={{ color: meta.color }}>{cat}</span>
+                        {peso != null ? (
+                          <span className="text-muted-foreground">({peso}%)</span>
+                        ) : null}
                       </span>
                     </SelectItem>
                   )
@@ -81,6 +129,9 @@ export function FactorForm({
             </Select>
           )}
         />
+        {esSectorId(sector) && categoria ? (
+          <p className="mt-1.5 text-xs text-muted-foreground">{etiquetaPeso(sector, categoria)}</p>
+        ) : null}
         <ErrorMsg mensaje={form.formState.errors.categoria?.message} />
       </div>
 
@@ -140,6 +191,28 @@ export function FactorForm({
         />
         <ErrorMsg mensaje={form.formState.errors.tipo?.message} />
       </fieldset>
+
+      <div>
+        <Label htmlFor="valorCOP">
+          {tipo === 'Oportunidad' ? 'Valor que podría ganar (COP)' : 'Valor que podría perder (COP)'}
+        </Label>
+        <Input
+          id="valorCOP"
+          className="mt-1.5"
+          inputMode="decimal"
+          placeholder="Ej: 250000000"
+          aria-invalid={!!form.formState.errors.valorCOP}
+          {...form.register('valorCOP')}
+        />
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Opcional. Se muestra también en dólares con la TRM de Configuración
+          {typeof valorCOP === 'number' && Number.isFinite(valorCOP)
+            ? ` · ${formatearUSD(copAUsd(valorCOP, trmUsd))} (TRM ${trmUsd.toLocaleString('es-CO')})`
+            : ''}
+          .
+        </p>
+        <ErrorMsg mensaje={form.formState.errors.valorCOP?.message} />
+      </div>
 
       <fieldset>
         <legend className="text-sm font-medium text-foreground">Impacto</legend>

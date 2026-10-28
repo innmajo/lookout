@@ -1,6 +1,6 @@
-import { CATEGORIAS, type Categoria, type FactorPestel, type Impacto, type Plazo } from '@/types/pestel'
-import { calcularPrioridad, esCritico } from '@/lib/prioridad'
-import { IMPACTOS, PLAZOS } from '@/types/pestel'
+import { CATEGORIAS, IMPACTOS, PLAZOS, type Categoria, type FactorPestel, type Impacto, type Plazo } from '@/types/pestel'
+import { SECTORES } from '@/lib/sectores'
+import { calcularNivelCelda, esCritico } from '@/lib/prioridad'
 
 export interface KpisPestel {
   total: number
@@ -20,7 +20,7 @@ export interface CeldaMatriz {
   impacto: Impacto
   plazo: Plazo
   factores: FactorPestel[]
-  nivel: ReturnType<typeof calcularPrioridad>['nivel']
+  nivel: ReturnType<typeof calcularNivelCelda>['nivel']
   color: string
 }
 
@@ -76,7 +76,7 @@ export function generarInsights(factores: FactorPestel[]): string[] {
 
   if (kpis.criticos > 0) {
     insights.push(
-      `Hay ${kpis.criticos} factor${kpis.criticos === 1 ? '' : 'es'} en nivel CRÍTICO (alto impacto y corto plazo) que requieren acción inmediata.`,
+      `Hay ${kpis.criticos} factor${kpis.criticos === 1 ? '' : 'es'} en nivel CRÍTICO (impacto, plazo y peso del sector) que requieren acción inmediata.`,
     )
   } else {
     insights.push('No hay factores en nivel CRÍTICO. El entorno se puede gestionar con planificación y seguimiento.')
@@ -88,6 +88,20 @@ export function generarInsights(factores: FactorPestel[]): string[] {
     )
   }
 
+  const sectoresUsados = [...new Set(factores.map((f) => f.sector))]
+  const unico = sectoresUsados.length === 1 ? sectoresUsados[0] : undefined
+  if (unico) {
+    const meta = SECTORES[unico]
+    const dominante = [...CATEGORIAS].sort((a, b) => meta.pesos[b] - meta.pesos[a])[0]
+    insights.push(
+      `En ${meta.nombre} el entorno ${dominante} tiene el mayor peso (${meta.pesos[dominante]}%) y eleva el semáforo de esos factores.`,
+    )
+  } else if (sectoresUsados.length > 1) {
+    insights.push(
+      `Hay factores de ${sectoresUsados.length} sectores. El semáforo de cada uno usa los pesos PESTEL de su propio sector.`,
+    )
+  }
+
   return insights
 }
 
@@ -96,7 +110,7 @@ export function celdasMatriz(factores: FactorPestel[]): CeldaMatriz[] {
   for (const impacto of IMPACTOS) {
     for (const plazo of PLAZOS) {
       const deCelda = factores.filter((f) => f.impacto === impacto && f.plazo === plazo)
-      const prioridad = calcularPrioridad({ impacto, plazo })
+      const prioridad = calcularNivelCelda(impacto, plazo)
       celdas.push({
         impacto,
         plazo,

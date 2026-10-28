@@ -1,6 +1,9 @@
-import type { FactorPestel } from '@/types/pestel'
+import { copAUsd } from '@/lib/dinero'
 import { calcularPrioridad } from '@/lib/prioridad'
+import { SECTORES } from '@/lib/sectores'
 import { nombreArchivoExport } from '@/lib/utils'
+import { usePestelStore } from '@/store/usePestelStore'
+import type { FactorPestel } from '@/types/pestel'
 
 function celda(valor: string): string {
   const limpio = valor.replaceAll('"', '""')
@@ -8,10 +11,15 @@ function celda(valor: string): string {
 }
 
 export function exportarCsv(factores: FactorPestel[]): void {
+  const trm = usePestelStore.getState().trmUsd
   const encabezado = [
+    'Sector',
     'Categoría',
+    'Peso %',
     'Descripción',
     'Tipo',
+    'Valor COP',
+    'Valor USD',
     'Impacto',
     'Plazo',
     'Prioridad',
@@ -22,10 +30,15 @@ export function exportarCsv(factores: FactorPestel[]): void {
 
   const filas = factores.map((factor) => {
     const prioridad = calcularPrioridad(factor)
+    const usd = factor.valorCOP != null ? String(Math.round(copAUsd(factor.valorCOP, trm))) : ''
     return [
+      SECTORES[factor.sector]?.nombre ?? factor.sector,
       factor.categoria,
+      String(prioridad.peso),
       factor.descripcion,
       factor.tipo,
+      factor.valorCOP != null ? String(factor.valorCOP) : '',
+      usd,
       factor.impacto,
       factor.plazo,
       prioridad.nivel,

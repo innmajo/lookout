@@ -8,7 +8,10 @@ import {
   generarInsights,
   resumenPorEntorno,
 } from '@/lib/analytics'
-import { calcularPrioridad } from '@/lib/prioridad'
+import { copAUsd, exposicionEconomica, formatearCOP, formatearUSD, tieneValor } from '@/lib/dinero'
+import { calcularNivelCelda, calcularPrioridad } from '@/lib/prioridad'
+import { SECTORES } from '@/lib/sectores'
+import { usePestelStore } from '@/store/usePestelStore'
 import { CATEGORIAS } from '@/types/pestel'
 import { APP_NAME } from '@/lib/constants'
 import { fechaLarga, nombreArchivoExport } from '@/lib/utils'
@@ -99,6 +102,8 @@ export async function exportarPdf(factores: FactorPestel[]): Promise<void> {
   const insights = generarInsights(factores)
   const criticos = factoresCriticos(factores)
   const resumen = resumenPorEntorno(factores)
+  const trm = usePestelStore.getState().trmUsd
+  const dinero = exposicionEconomica(factores)
 
   doc.setFont(fuente, 'bold')
   doc.setFillColor(SLATE)
@@ -139,14 +144,26 @@ export async function exportarPdf(factores: FactorPestel[]): Promise<void> {
     doc.text(caja.label.toUpperCase(), x + 21, 80, { align: 'center' })
   })
 
+  if (dinero.conValor > 0) {
+    doc.setFont(fuente, 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(TEXTO)
+    doc.text(
+      `En riesgo: ${formatearCOP(dinero.enRiesgoCOP)}   ·   Por ganar: ${formatearCOP(dinero.porGanarCOP)}   ·   TRM ${trm.toLocaleString('es-CO')} COP/USD`,
+      margen,
+      90,
+    )
+  }
+
+  const yInsights = dinero.conValor > 0 ? 98 : 92
   doc.setFont(fuente, 'bold')
   doc.setFontSize(11)
   doc.setTextColor(TEAL)
-  doc.text('Insights automáticos', margen, 96)
+  doc.text('Insights automáticos', margen, yInsights)
   doc.setFont(fuente, 'normal')
   doc.setFontSize(10)
   doc.setTextColor(TEXTO)
-  let y = 104
+  let y = yInsights + 8
   insights.forEach((texto) => {
     const lineas = doc.splitTextToSize(`•  ${texto}`, ancho - margen * 2)
     doc.text(lineas, margen, y)
@@ -197,7 +214,7 @@ export async function exportarPdf(factores: FactorPestel[]): Promise<void> {
     const fila: string[] = [impacto]
     plazos.forEach((plazo) => {
       const n = factores.filter((f) => f.impacto === impacto && f.plazo === plazo).length
-      const nivel = calcularPrioridad({ impacto, plazo }).nivel
+      const nivel = calcularNivelCelda(impacto, plazo).nivel
       fila.push(`${n} · ${nivel}`)
     })
     return fila
@@ -215,7 +232,7 @@ export async function exportarPdf(factores: FactorPestel[]): Promise<void> {
       const impacto = impactos[data.row.index]
       const plazo = plazos[data.column.index - 1]
       if (!impacto || !plazo) return
-      const [r, g, b] = colorPrioridad(calcularPrioridad({ impacto, plazo }).nivel)
+      const [r, g, b] = colorPrioridad(calcularNivelCelda(impacto, plazo).nivel)
       data.cell.styles.fillColor = [r, g, b]
       data.cell.styles.textColor = 255
       data.cell.styles.fontStyle = 'bold'
@@ -232,11 +249,21 @@ export async function exportarPdf(factores: FactorPestel[]): Promise<void> {
 
   autoTable(doc, {
     startY: cursor,
-    head: [['Categoría', 'Tipo', 'Descripción', 'Impacto', 'Plazo']],
+    head: [['Sector', 'Categoría', 'Tipo', 'Descripción', 'Valor', 'Impacto', 'Plazo']],
     body:
       criticos.length === 0
-        ? [['—', '—', 'No hay factores críticos registrados', '—', '—']]
-        : criticos.map((f) => [f.categoria, f.tipo, f.descripcion, f.impacto, f.plazo]),
+        ? [['—', '—', '—', 'No hay factores críticos registrados', '—', '—', '—']]
+        : criticos.map((f) => [
+            SECTORES[f.sector]?.nombre ?? f.sector,
+            f.categoria,
+            f.tipo,
+            f.descripcion,
+            tieneValor(f)
+              ? `${formatearCOP(f.valorCOP)} / ${formatearUSD(copAUsd(f.valorCOP, trm))}`
+              : '—',
+            f.impacto,
+            f.plazo,
+          ]),
     theme: 'grid',
     styles: { font: fuente, fontSize: 8, textColor: TEXTO, valign: 'middle' },
     headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold' },
@@ -271,17 +298,26 @@ export async function exportarPdf(factores: FactorPestel[]): Promise<void> {
 
     autoTable(doc, {
       startY: cursor,
-      head: [[`${categoria.toUpperCase()}`, 'Tipo', 'Impacto', 'Plazo', 'Prioridad', 'Descripción']],
+      head: [[`${categoria.toUpperCase()}`, 'Sector', 'Tipo', 'Valor', 'Impacto', 'Plazo', 'Prioridad', 'Descripción']],
       body: delGrupo.map((f) => {
         const p = calcularPrioridad(f)
-        return [f.categoria, f.tipo, f.impacto, f.plazo, p.nivel, f.descripcion]
+        return [
+          f.categoria,
+          SECTORES[f.sector]?.nombre ?? f.sector,
+          f.tipo,
+          tieneValor(f) ? formatearCOP(f.valorCOP) : '—',
+          f.impacto,
+          f.plazo,
+          p.nivel,
+          f.descripcion,
+        ]
       }),
       theme: 'grid',
       styles: { font: fuente, fontSize: 8, textColor: TEXTO, valign: 'top' },
       headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold' },
-      columnStyles: { 5: { cellWidth: 70 } },
+      columnStyles: { 7: { cellWidth: 58 } },
       didParseCell: (data) => {
-        if (data.section !== 'body' || data.column.index !== 4) return
+        if (data.section !== 'body' || data.column.index !== 6) return
         const nivel = String(data.cell.raw)
         const [r, g, b] = colorPrioridad(nivel)
         data.cell.styles.fillColor = [r, g, b]

@@ -1,4 +1,5 @@
-import { AlertTriangle, Leaf, ShieldAlert, Sprout, TrendingUp } from 'lucide-react'
+import { AlertTriangle, CircleDollarSign, Leaf, ShieldAlert, Sprout, TrendingUp } from 'lucide-react'
+import { CardOrb, IconBubble } from '@/components/IconBubble'
 import { BarrasAgrupadas } from '@/components/charts/BarrasAgrupadas'
 import { DonaCategorias } from '@/components/charts/DonaCategorias'
 import { RadarEntornos } from '@/components/charts/RadarEntornos'
@@ -14,12 +15,16 @@ import {
   resumenPorEntorno,
 } from '@/lib/analytics'
 import { CATEGORIA_META } from '@/lib/constants'
+import { copAUsd, exposicionEconomica, formatearCOP, formatearUSD, tieneValor } from '@/lib/dinero'
+import { SECTORES } from '@/lib/sectores'
 import { cn } from '@/lib/utils'
 import { usePestelStore } from '@/store/usePestelStore'
 
 export function Dashboard() {
   const factores = usePestelStore((s) => s.factores)
+  const trmUsd = usePestelStore((s) => s.trmUsd)
   const kpis = calcularKpis(factores)
+  const dinero = exposicionEconomica(factores)
   const resumen = resumenPorEntorno(factores)
   const insights = generarInsights(factores)
   const criticos = factoresCriticos(factores)
@@ -40,7 +45,7 @@ export function Dashboard() {
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader />
 
-      <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard titulo="Factores" valor={kpis.total} icono={Leaf} />
         <KpiCard titulo="Amenazas" valor={kpis.amenazas} icono={ShieldAlert} acento="text-primary" />
         <KpiCard titulo="Oportunidades" valor={kpis.oportunidades} icono={Sprout} acento="text-monitorear" />
@@ -49,6 +54,19 @@ export function Dashboard() {
           valor={kpis.criticos}
           icono={AlertTriangle}
           destacado
+        />
+        <KpiMoney
+          titulo="En riesgo"
+          cop={dinero.enRiesgoCOP}
+          trm={trmUsd}
+          vacio={dinero.conValor === 0}
+        />
+        <KpiMoney
+          titulo="Por ganar"
+          cop={dinero.porGanarCOP}
+          trm={trmUsd}
+          vacio={dinero.conValor === 0}
+          positivo
         />
       </section>
 
@@ -116,7 +134,9 @@ export function Dashboard() {
       <Card className={cn(criticos.length > 0 && 'border-critico/40')}>
         <CardHeader>
           <CardTitle className="text-critico">Alertas urgentes</CardTitle>
-          <CardDescription>Factores en nivel CRÍTICO: alto impacto y corto plazo</CardDescription>
+          <CardDescription>
+            Semáforo CRÍTICO según impacto, plazo y peso del sector en ese entorno PESTEL
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {criticos.length === 0 ? (
@@ -131,7 +151,7 @@ export function Dashboard() {
                     key={factor.id}
                     className="flex flex-col gap-2 rounded-xl border border-critico/30 bg-critico/10 p-3 sm:flex-row sm:items-start"
                   >
-                    <div className="flex items-center gap-2 sm:w-40">
+                    <div className="flex items-center gap-2 sm:w-44">
                       <Icon className="h-4 w-4" style={{ color: meta.color }} aria-hidden />
                       <span className="text-sm font-bold" style={{ color: meta.color }}>
                         {factor.categoria}
@@ -139,12 +159,19 @@ export function Dashboard() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex flex-wrap gap-2">
+                        <Badge variant="outline">{SECTORES[factor.sector]?.nombre ?? factor.sector}</Badge>
                         <Badge variant={factor.tipo === 'Amenaza' ? 'amenaza' : 'oportunidad'}>
                           {factor.tipo}
                         </Badge>
-                        <SemaforoBadge factor={factor} />
+                        <SemaforoBadge factor={factor} mostrarPuntaje />
                       </div>
                       <p className="text-sm text-foreground">{factor.descripcion}</p>
+                      {tieneValor(factor) ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {factor.tipo === 'Amenaza' ? 'Podría perder' : 'Podría ganar'}{' '}
+                          {formatearCOP(factor.valorCOP)} · {formatearUSD(copAUsd(factor.valorCOP, trmUsd))}
+                        </p>
+                      ) : null}
                     </div>
                   </li>
                 )
@@ -162,7 +189,7 @@ function PageHeader() {
     <header className="mb-6">
       <h1 className="text-2xl text-foreground">Dashboard</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Lectura del entorno externo para priorizar decisiones.
+        Lectura del entorno externo. El semáforo pondera el peso PESTEL del sector de cada factor.
       </p>
     </header>
   )
@@ -182,22 +209,48 @@ function KpiCard({
   destacado?: boolean
 }) {
   return (
-    <Card className={cn(destacado && 'border-critico/40 bg-critico/10')}>
-      <CardContent className="flex items-center justify-between p-5">
+    <Card className={cn('relative overflow-hidden', destacado && 'border-critico/40 bg-critico/10')}>
+      <CardOrb tono={destacado ? 'critico' : 'tema'} />
+      <CardContent className="relative flex items-center justify-between p-5">
         <div>
           <p className="section-title">{titulo}</p>
           <p className={cn('mt-2 text-3xl font-semibold tracking-tight', destacado ? 'text-critico' : acento)}>
             {valor}
           </p>
         </div>
-        <div
-          className={cn(
-            'flex h-11 w-11 items-center justify-center rounded-xl',
-            destacado ? 'bg-critico/20 text-critico' : 'bg-primary/15 text-accent',
-          )}
-        >
-          <Icono className="h-5 w-5" aria-hidden />
+        <IconBubble icon={Icono} tono={destacado ? 'critico' : 'tema'} />
+      </CardContent>
+    </Card>
+  )
+}
+
+function KpiMoney({
+  titulo,
+  cop,
+  trm,
+  vacio,
+  positivo = false,
+}: {
+  titulo: string
+  cop: number
+  trm: number
+  vacio: boolean
+  positivo?: boolean
+}) {
+  return (
+    <Card className="relative overflow-hidden">
+      <CardOrb tono={positivo ? 'ok' : 'critico'} />
+      <CardContent className="relative flex items-center justify-between p-5">
+        <div>
+          <p className="section-title">{titulo}</p>
+          <p className={cn('mt-2 text-lg font-semibold tracking-tight', positivo ? 'text-monitorear' : 'text-critico')}>
+            {vacio ? 'Sin valores' : formatearCOP(cop)}
+          </p>
+          {!vacio ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">{formatearUSD(copAUsd(cop, trm))}</p>
+          ) : null}
         </div>
+        <IconBubble icon={CircleDollarSign} tono={positivo ? 'ok' : 'critico'} />
       </CardContent>
     </Card>
   )

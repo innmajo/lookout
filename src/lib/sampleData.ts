@@ -4,10 +4,13 @@ const BASE = new Date('2026-10-01T12:00:00.000Z').getTime()
 
 function ejemplo(
   index: number,
-  data: Omit<FactorPestel, 'id' | 'fechaRegistro' | 'esEjemplo'>,
+  data: Omit<FactorPestel, 'id' | 'fechaRegistro' | 'esEjemplo' | 'sector'> & {
+    valorCOP?: number
+  },
 ): FactorPestel {
   return {
     ...data,
+    sector: 'agro',
     id: `ejemplo-${String(index).padStart(2, '0')}`,
     fechaRegistro: new Date(BASE + index * 86_400_000).toISOString(),
     esEjemplo: true,
@@ -20,6 +23,7 @@ export const FACTORES_EJEMPLO: FactorPestel[] = [
     tipo: 'Amenaza',
     impacto: 'Alto',
     plazo: 'Corto plazo',
+    valorCOP: 1_800_000_000,
     descripcion:
       'Posible cambio en los contingentes de importación de arroz blanco que presionaría el precio interno y la participación de las marcas locales en el mercado colombiano.',
   }),
@@ -36,6 +40,7 @@ export const FACTORES_EJEMPLO: FactorPestel[] = [
     tipo: 'Amenaza',
     impacto: 'Alto',
     plazo: 'Corto plazo',
+    valorCOP: 900_000_000,
     descripcion:
       'Paros y bloqueos de vías en el suroccidente que interrumpen el acopio de paddy y la distribución de arroz hacia Cali, Popayán y el Eje Cafetero.',
   }),
@@ -44,6 +49,7 @@ export const FACTORES_EJEMPLO: FactorPestel[] = [
     tipo: 'Amenaza',
     impacto: 'Alto',
     plazo: 'Corto plazo',
+    valorCOP: 1_200_000_000,
     descripcion:
       'Aumento del 20% en el precio de los fertilizantes nitrogenados, que eleva el costo de producción de los agricultores aliados y presiona el precio de compra del paddy.',
   }),
@@ -60,6 +66,7 @@ export const FACTORES_EJEMPLO: FactorPestel[] = [
     tipo: 'Oportunidad',
     impacto: 'Alto',
     plazo: 'Mediano plazo',
+    valorCOP: 800_000_000,
     descripcion:
       'Crecimiento sostenido del consumo interno de arroz como alimento básico, con espacio para marcas regionales de confianza.',
   }),
@@ -92,6 +99,7 @@ export const FACTORES_EJEMPLO: FactorPestel[] = [
     tipo: 'Oportunidad',
     impacto: 'Alto',
     plazo: 'Mediano plazo',
+    valorCOP: 220_000_000,
     descripcion:
       'Adopción de agricultura de precisión, sensores de humedad y drones para optimizar riego y fertilización en los lotes aliados.',
   }),
@@ -108,6 +116,7 @@ export const FACTORES_EJEMPLO: FactorPestel[] = [
     tipo: 'Amenaza',
     impacto: 'Alto',
     plazo: 'Corto plazo',
+    valorCOP: 2_500_000_000,
     descripcion:
       'Fenómeno de El Niño con reducción de lluvias en el Valle del Cauca, que amenaza el rendimiento de la cosecha de paddy y la continuidad de molino.',
   }),
