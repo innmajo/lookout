@@ -1,4 +1,5 @@
 import { AlertTriangle, CircleDollarSign, Leaf, ShieldAlert, Sprout, TrendingUp } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { CardOrb, IconBubble } from '@/components/IconBubble'
 import { BarrasAgrupadas } from '@/components/charts/BarrasAgrupadas'
 import { DonaCategorias } from '@/components/charts/DonaCategorias'
@@ -8,6 +9,14 @@ import { MatrizPriorizacion } from '@/components/matriz/MatrizPriorizacion'
 import { SemaforoBadge } from '@/components/SemaforoBadge'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   calcularKpis,
   factoresCriticos,
@@ -16,18 +25,34 @@ import {
 } from '@/lib/analytics'
 import { CATEGORIA_META } from '@/lib/constants'
 import { copAUsd, exposicionEconomica, formatearCOP, formatearUSD, tieneValor } from '@/lib/dinero'
-import { SECTORES } from '@/lib/sectores'
+import { LISTA_SECTORES, SECTORES, type SectorId } from '@/lib/sectores'
 import { cn } from '@/lib/utils'
 import { usePestelStore } from '@/store/usePestelStore'
+import { useThemeStore } from '@/store/useThemeStore'
+
+type FiltroSector = SectorId | 'todos'
 
 export function Dashboard() {
   const factores = usePestelStore((s) => s.factores)
   const trmUsd = usePestelStore((s) => s.trmUsd)
-  const kpis = calcularKpis(factores)
-  const dinero = exposicionEconomica(factores)
-  const resumen = resumenPorEntorno(factores)
-  const insights = generarInsights(factores)
-  const criticos = factoresCriticos(factores)
+  const sectorOrg = useThemeStore((s) => s.sector)
+  const [filtro, setFiltro] = useState<FiltroSector | null>(null)
+  const sectorVista = filtro ?? sectorOrg
+
+  const visibles = useMemo(
+    () => (sectorVista === 'todos' ? factores : factores.filter((f) => f.sector === sectorVista)),
+    [factores, sectorVista],
+  )
+
+  const kpis = calcularKpis(visibles)
+  const dinero = exposicionEconomica(visibles)
+  const resumen = resumenPorEntorno(visibles)
+  const insights = generarInsights(visibles)
+  const criticos = factoresCriticos(visibles)
+
+  const filtroSector = (
+    <FiltroSectorDashboard value={sectorVista} onChange={setFiltro} />
+  )
 
   if (factores.length === 0) {
     return (
@@ -41,9 +66,22 @@ export function Dashboard() {
     )
   }
 
+  if (visibles.length === 0) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <PageHeader filtro={filtroSector} />
+        <EmptyState
+          titulo={`No hay factores de ${SECTORES[sectorVista as SectorId]?.nombre ?? 'este sector'}`}
+          descripcion="Cambie el filtro a todos los sectores o registre un factor de este sector."
+          accion={false}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <PageHeader />
+      <PageHeader filtro={filtroSector} />
 
       <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard titulo="Factores" valor={kpis.total} icono={Leaf} />
@@ -127,7 +165,7 @@ export function Dashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <MatrizPriorizacion factores={factores} />
+          <MatrizPriorizacion factores={visibles} />
         </CardContent>
       </Card>
 
@@ -184,14 +222,44 @@ export function Dashboard() {
   )
 }
 
-function PageHeader() {
+function PageHeader({ filtro }: { filtro?: ReactNode }) {
   return (
-    <header className="mb-6">
-      <h1 className="text-2xl text-foreground">Dashboard</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Lectura del entorno externo. El semáforo pondera el peso PESTEL del sector de cada factor.
-      </p>
+    <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 className="text-2xl text-foreground">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Lectura del entorno externo. El semáforo pondera el peso PESTEL del sector de cada factor.
+        </p>
+      </div>
+      {filtro}
     </header>
+  )
+}
+
+function FiltroSectorDashboard({
+  value,
+  onChange,
+}: {
+  value: FiltroSector
+  onChange: (value: FiltroSector) => void
+}) {
+  return (
+    <div className="w-full sm:max-w-xs">
+      <Label htmlFor="dashboard-sector">Ver sector</Label>
+      <Select value={value} onValueChange={(v) => onChange(v as FiltroSector)}>
+        <SelectTrigger id="dashboard-sector" className="mt-1.5">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="todos">Todos los sectores</SelectItem>
+          {LISTA_SECTORES.map((sector) => (
+            <SelectItem key={sector.id} value={sector.id}>
+              {sector.nombre}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }
 

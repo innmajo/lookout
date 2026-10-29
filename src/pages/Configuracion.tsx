@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TRM_POR_DEFECTO } from '@/lib/dinero'
+import { FACTORES_EJEMPLO } from '@/lib/sampleData'
 import { usePestelStore } from '@/store/usePestelStore'
 import { useThemeStore } from '@/store/useThemeStore'
 
@@ -82,8 +83,8 @@ export function Configuracion() {
         <CardHeader>
           <CardTitle>Datos de ejemplo</CardTitle>
           <CardDescription>
-            Carga 16 factores ficticios del entorno agroindustrial, con varios críticos, marcados
-            como ejemplo. Reemplaza los registros actuales.
+            Carga {FACTORES_EJEMPLO.length} factores ficticios de los 8 sectores, con varios
+            críticos, marcados como ejemplo. Reemplaza los registros actuales.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -99,7 +100,7 @@ export function Configuracion() {
                 <AlertDialogTitle>¿Cargar el set de demostración?</AlertDialogTitle>
                 <AlertDialogDescription>
                   Se reemplazarán los {factores.length} factor{factores.length === 1 ? '' : 'es'}{' '}
-                  actuales por datos de ejemplo del sector agropecuario.
+                  actuales por datos de ejemplo de los 8 sectores.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -107,7 +108,6 @@ export function Configuracion() {
                 <AlertDialogAction
                   onClick={() => {
                     cargarEjemplos()
-                    setSector('agro')
                     toast.success('Datos de ejemplo cargados')
                   }}
                 >
