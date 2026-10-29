@@ -1,6 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js'
 import { create } from 'zustand'
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase'
+import type { DatosEmpresaRegistro } from '@/types/database'
 
 interface AuthState {
   session: Session | null
@@ -10,7 +11,11 @@ interface AuthState {
   setSession: (session: Session | null) => void
   setInitializing: (value: boolean) => void
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>
+  signUp: (
+    email: string,
+    password: string,
+    empresa: DatosEmpresaRegistro,
+  ) => Promise<{ needsEmailConfirmation: boolean }>
   signOut: () => Promise<void>
 }
 
@@ -31,9 +36,37 @@ export const useAuthStore = create<AuthState>((set) => ({
     const { error } = await requireSupabase().auth.signInWithPassword({ email, password })
     if (error) throw error
   },
-  signUp: async (email, password) => {
-    const { data, error } = await requireSupabase().auth.signUp({ email, password })
+  signUp: async (email, password, empresa) => {
+    const metadata = {
+      nombre_empresa: empresa.nombreEmpresa.trim(),
+      responsable_nombre: empresa.responsableNombre.trim(),
+      responsable_apellido: empresa.responsableApellido.trim(),
+      responsable_cedula: empresa.responsableCedula.trim(),
+      direccion: empresa.direccion.trim(),
+      ciudad: empresa.ciudad.trim(),
+    }
+
+    const { data, error } = await requireSupabase().auth.signUp({
+      email,
+      password,
+      options: { data: metadata },
+    })
     if (error) throw error
+
+    const userId = data.user?.id
+    if (userId && data.session) {
+      const { error: perfilError } = await requireSupabase()
+        .from('perfiles')
+        .upsert(
+          {
+            id: userId,
+            ...metadata,
+          },
+          { onConflict: 'id' },
+        )
+      if (perfilError) throw perfilError
+    }
+
     return { needsEmailConfirmation: !data.session }
   },
   signOut: async () => {

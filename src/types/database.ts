@@ -7,18 +7,36 @@ export interface Database {
         Row: {
           id: string
           trm_usd: number
+          nombre_empresa: string | null
+          responsable_nombre: string | null
+          responsable_apellido: string | null
+          responsable_cedula: string | null
+          direccion: string | null
+          ciudad: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id: string
           trm_usd?: number
+          nombre_empresa?: string | null
+          responsable_nombre?: string | null
+          responsable_apellido?: string | null
+          responsable_cedula?: string | null
+          direccion?: string | null
+          ciudad?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           trm_usd?: number
+          nombre_empresa?: string | null
+          responsable_nombre?: string | null
+          responsable_apellido?: string | null
+          responsable_cedula?: string | null
+          direccion?: string | null
+          ciudad?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -83,3 +101,12 @@ export interface Database {
 export type FactorRow = Database['public']['Tables']['factores']['Row']
 export type FactorInsert = Database['public']['Tables']['factores']['Insert']
 export type PerfilRow = Database['public']['Tables']['perfiles']['Row']
+
+export interface DatosEmpresaRegistro {
+  nombreEmpresa: string
+  responsableNombre: string
+  responsableApellido: string
+  responsableCedula: string
+  direccion: string
+  ciudad: string
+}

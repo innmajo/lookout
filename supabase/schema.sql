@@ -1,10 +1,16 @@
 -- Lookout · esquema Supabase
 -- Ejecutar en: SQL Editor del proyecto (o supabase db push si usas CLI)
 
--- Perfil por usuario (TRM y preferencias)
+-- Perfil por usuario (empresa, responsable, TRM)
 create table if not exists public.perfiles (
   id uuid primary key references auth.users (id) on delete cascade,
   trm_usd numeric not null default 4000 check (trm_usd > 0),
+  nombre_empresa text,
+  responsable_nombre text,
+  responsable_apellido text,
+  responsable_cedula text,
+  direccion text,
+  ciudad text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -83,7 +89,7 @@ create policy "factores_delete_own"
   on public.factores for delete
   using (auth.uid() = user_id);
 
--- Crear perfil al registrarse
+-- Crear perfil al registrarse (datos de empresa desde user_metadata)
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -91,9 +97,32 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.perfiles (id)
-  values (new.id)
-  on conflict (id) do nothing;
+  insert into public.perfiles (
+    id,
+    nombre_empresa,
+    responsable_nombre,
+    responsable_apellido,
+    responsable_cedula,
+    direccion,
+    ciudad
+  )
+  values (
+    new.id,
+    nullif(trim(coalesce(new.raw_user_meta_data->>'nombre_empresa', '')), ''),
+    nullif(trim(coalesce(new.raw_user_meta_data->>'responsable_nombre', '')), ''),
+    nullif(trim(coalesce(new.raw_user_meta_data->>'responsable_apellido', '')), ''),
+    nullif(trim(coalesce(new.raw_user_meta_data->>'responsable_cedula', '')), ''),
+    nullif(trim(coalesce(new.raw_user_meta_data->>'direccion', '')), ''),
+    nullif(trim(coalesce(new.raw_user_meta_data->>'ciudad', '')), '')
+  )
+  on conflict (id) do update set
+    nombre_empresa = coalesce(excluded.nombre_empresa, public.perfiles.nombre_empresa),
+    responsable_nombre = coalesce(excluded.responsable_nombre, public.perfiles.responsable_nombre),
+    responsable_apellido = coalesce(excluded.responsable_apellido, public.perfiles.responsable_apellido),
+    responsable_cedula = coalesce(excluded.responsable_cedula, public.perfiles.responsable_cedula),
+    direccion = coalesce(excluded.direccion, public.perfiles.direccion),
+    ciudad = coalesce(excluded.ciudad, public.perfiles.ciudad),
+    updated_at = now();
   return new;
 end;
 $$;

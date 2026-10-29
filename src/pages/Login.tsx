@@ -41,6 +41,15 @@ function evaluarPassword(password: string) {
   }))
 }
 
+const EMPRESA_VACIA = {
+  nombreEmpresa: '',
+  responsableNombre: '',
+  responsableApellido: '',
+  responsableCedula: '',
+  direccion: '',
+  ciudad: '',
+}
+
 export function Login() {
   const navigate = useNavigate()
   const signIn = useAuthStore((s) => s.signIn)
@@ -50,6 +59,7 @@ export function Login() {
   const [modo, setModo] = useState<Modo>('entrar')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [empresa, setEmpresa] = useState(EMPRESA_VACIA)
   const [mostrarPassword, setMostrarPassword] = useState(false)
   const [enviando, setEnviando] = useState(false)
 
@@ -59,6 +69,17 @@ export function Login() {
   useEffect(() => {
     aplicarApariencia(tema, sector)
   }, [tema, sector])
+
+  function setCampoEmpresa(campo: keyof typeof EMPRESA_VACIA, valor: string) {
+    setEmpresa((prev) => ({ ...prev, [campo]: valor }))
+  }
+
+  function cambiarModo(siguiente: Modo) {
+    setModo(siguiente)
+    setPassword('')
+    setMostrarPassword(false)
+    if (siguiente === 'entrar') setEmpresa(EMPRESA_VACIA)
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -74,12 +95,12 @@ export function Login() {
         toast.success('Sesión iniciada')
         navigate('/dashboard', { replace: true })
       } else {
-        const { needsEmailConfirmation } = await signUp(email.trim(), password)
+        const { needsEmailConfirmation } = await signUp(email.trim(), password, empresa)
         if (needsEmailConfirmation) {
           toast.message('Revisa tu correo para confirmar la cuenta')
-          setModo('entrar')
+          cambiarModo('entrar')
         } else {
-          toast.success('Cuenta creada')
+          toast.success('Empresa registrada')
           navigate('/dashboard', { replace: true })
         }
       }
@@ -98,7 +119,7 @@ export function Login() {
         <ThemeToggle />
       </div>
 
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-lg">
         <ThemeContentFigures />
 
         <Card className="relative">
@@ -119,12 +140,97 @@ export function Login() {
               </div>
             </div>
             <CardTitle className="text-xl">
-              {modo === 'entrar' ? 'Iniciar sesión' : 'Crear cuenta'}
+              {modo === 'entrar' ? 'Iniciar sesión' : 'Registrar empresa'}
             </CardTitle>
           </CardHeader>
 
           <CardContent className="relative">
             <form className="space-y-4" onSubmit={onSubmit}>
+              {modo === 'registrar' ? (
+                <>
+                  <div className="space-y-3">
+                    <p className="section-title">Empresa</p>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="nombreEmpresa">Nombre de la empresa</Label>
+                      <Input
+                        id="nombreEmpresa"
+                        required
+                        value={empresa.nombreEmpresa}
+                        onChange={(e) => setCampoEmpresa('nombreEmpresa', e.target.value)}
+                        placeholder="Razón social o nombre comercial"
+                        autoComplete="organization"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="section-title">Responsable</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="responsableNombre">Nombre</Label>
+                        <Input
+                          id="responsableNombre"
+                          required
+                          value={empresa.responsableNombre}
+                          onChange={(e) => setCampoEmpresa('responsableNombre', e.target.value)}
+                          placeholder="Nombre"
+                          autoComplete="given-name"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="responsableApellido">Apellido</Label>
+                        <Input
+                          id="responsableApellido"
+                          required
+                          value={empresa.responsableApellido}
+                          onChange={(e) => setCampoEmpresa('responsableApellido', e.target.value)}
+                          placeholder="Apellido"
+                          autoComplete="family-name"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="responsableCedula">Cédula</Label>
+                      <Input
+                        id="responsableCedula"
+                        required
+                        value={empresa.responsableCedula}
+                        onChange={(e) => setCampoEmpresa('responsableCedula', e.target.value)}
+                        placeholder="Número de documento"
+                        inputMode="numeric"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="direccion">Dirección</Label>
+                      <Input
+                        id="direccion"
+                        required
+                        value={empresa.direccion}
+                        onChange={(e) => setCampoEmpresa('direccion', e.target.value)}
+                        placeholder="Dirección de la empresa"
+                        autoComplete="street-address"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ciudad">Ciudad</Label>
+                      <Input
+                        id="ciudad"
+                        required
+                        value={empresa.ciudad}
+                        onChange={(e) => setCampoEmpresa('ciudad', e.target.value)}
+                        placeholder="Ciudad"
+                        autoComplete="address-level2"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="section-title">Acceso</p>
+                  </div>
+                </>
+              ) : null}
+
               <div className="space-y-1.5">
                 <Label htmlFor="email">Correo</Label>
                 <Input
@@ -134,7 +240,7 @@ export function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@correo.com"
+                  placeholder="correo@empresa.com"
                 />
               </div>
 
@@ -204,7 +310,11 @@ export function Login() {
                 className="w-full"
                 disabled={enviando || (modo === 'registrar' && !passwordValida)}
               >
-                {enviando ? 'Espera…' : modo === 'entrar' ? 'Entrar' : 'Registrarme'}
+                {enviando
+                  ? 'Espera…'
+                  : modo === 'entrar'
+                    ? 'Entrar'
+                    : 'Registrar empresa'}
               </Button>
             </form>
 
@@ -213,9 +323,9 @@ export function Login() {
               <button
                 type="button"
                 className="font-medium text-primary underline-offset-2 hover:underline"
-                onClick={() => setModo(modo === 'entrar' ? 'registrar' : 'entrar')}
+                onClick={() => cambiarModo(modo === 'entrar' ? 'registrar' : 'entrar')}
               >
-                {modo === 'entrar' ? 'Regístrate' : 'Inicia sesión'}
+                {modo === 'entrar' ? 'Registra tu empresa' : 'Inicia sesión'}
               </button>
             </p>
           </CardContent>
