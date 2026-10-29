@@ -1,0 +1,13 @@
+# Lookout · Supabase CLI
+# Documentación: https://supabase.com/docs/guides/cli
+
+project_id = "pdhpqtgajvbvmfhblzhr"
+
+[api]
+enabled = true
+
+[db]
+major_version = 15
+
+[db.migrations]
+schema_paths = []

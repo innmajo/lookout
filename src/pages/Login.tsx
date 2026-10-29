@@ -43,6 +43,7 @@ function evaluarPassword(password: string) {
 
 const EMPRESA_VACIA = {
   nombreEmpresa: '',
+  nit: '',
   responsableNombre: '',
   responsableApellido: '',
   responsableCedula: '',
@@ -159,6 +160,18 @@ export function Login() {
                         onChange={(e) => setCampoEmpresa('nombreEmpresa', e.target.value)}
                         placeholder="Razón social o nombre comercial"
                         autoComplete="organization"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="nit">NIT</Label>
+                      <Input
+                        id="nit"
+                        required
+                        value={empresa.nit}
+                        onChange={(e) => setCampoEmpresa('nit', e.target.value)}
+                        placeholder="Número de identificación tributaria"
+                        inputMode="numeric"
+                        autoComplete="off"
                       />
                     </div>
                   </div>

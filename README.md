@@ -25,7 +25,7 @@ VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
 ```
 
-3. En **SQL Editor**, ejecuta el contenido de `supabase/schema.sql` (tablas `perfiles` y `factores`, RLS y trigger de perfil).
+3. **Migraciones automáticas:** al hacer push a `main`, el workflow `.github/workflows/supabase-migrate.yml` aplica `supabase/migrations/`. Configura una sola vez los secretos del repo (ver `supabase/README.md`).
 4. En **Authentication → Providers**, deja Email habilitado. Para desarrollo puedes desactivar **Confirm email** si no quieres verificar correo.
 
 ## Cómo correr el proyecto

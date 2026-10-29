@@ -8,6 +8,7 @@ export interface Database {
           id: string
           trm_usd: number
           nombre_empresa: string | null
+          nit: string | null
           responsable_nombre: string | null
           responsable_apellido: string | null
           responsable_cedula: string | null
@@ -20,6 +21,7 @@ export interface Database {
           id: string
           trm_usd?: number
           nombre_empresa?: string | null
+          nit?: string | null
           responsable_nombre?: string | null
           responsable_apellido?: string | null
           responsable_cedula?: string | null
@@ -32,6 +34,7 @@ export interface Database {
           id?: string
           trm_usd?: number
           nombre_empresa?: string | null
+          nit?: string | null
           responsable_nombre?: string | null
           responsable_apellido?: string | null
           responsable_cedula?: string | null
@@ -104,6 +107,7 @@ export type PerfilRow = Database['public']['Tables']['perfiles']['Row']
 
 export interface DatosEmpresaRegistro {
   nombreEmpresa: string
+  nit: string
   responsableNombre: string
   responsableApellido: string
   responsableCedula: string

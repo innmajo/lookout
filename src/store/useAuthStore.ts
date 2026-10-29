@@ -39,6 +39,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUp: async (email, password, empresa) => {
     const metadata = {
       nombre_empresa: empresa.nombreEmpresa.trim(),
+      nit: empresa.nit.trim(),
       responsable_nombre: empresa.responsableNombre.trim(),
       responsable_apellido: empresa.responsableApellido.trim(),
       responsable_cedula: empresa.responsableCedula.trim(),
