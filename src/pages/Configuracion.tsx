@@ -17,11 +17,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TRM_POR_DEFECTO } from '@/lib/dinero'
+import { mensajeErrorSupabase } from '@/lib/factoresApi'
 import { FACTORES_EJEMPLO } from '@/lib/sampleData'
+import { useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
 import { useThemeStore } from '@/store/useThemeStore'
 
 export function Configuracion() {
+  const userId = useAuthStore((s) => s.user?.id)
   const factores = usePestelStore((s) => s.factores)
   const cargarEjemplos = usePestelStore((s) => s.cargarEjemplos)
   const borrarTodo = usePestelStore((s) => s.borrarTodo)
@@ -35,7 +38,8 @@ export function Configuracion() {
       <header>
         <h1 className="text-2xl text-foreground">Configuración</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Los registros se guardan solo en este navegador (localStorage). No hay servidor.
+          Los factores y la TRM se guardan en Supabase asociados a tu cuenta. El tema y el sector de
+          la organización siguen en este navegador.
         </p>
       </header>
 
@@ -70,11 +74,14 @@ export function Configuracion() {
             value={trmUsd}
             onChange={(e) => {
               const n = Number(e.target.value)
-              if (Number.isFinite(n) && n > 0) setTrmUsd(n)
+              if (Number.isFinite(n) && n > 0) {
+                void setTrmUsd(n).catch((error) => toast.error(mensajeErrorSupabase(error)))
+              }
             }}
           />
           <p className="mt-1.5 text-xs text-muted-foreground">
-            Valor de referencia (no es una TRM en vivo). Por defecto {TRM_POR_DEFECTO.toLocaleString('es-CO')}.
+            Valor de referencia (no es una TRM en vivo). Por defecto{' '}
+            {TRM_POR_DEFECTO.toLocaleString('es-CO')}.
           </p>
         </CardContent>
       </Card>
@@ -84,7 +91,7 @@ export function Configuracion() {
           <CardTitle>Datos de ejemplo</CardTitle>
           <CardDescription>
             Carga {FACTORES_EJEMPLO.length} factores ficticios de los 8 sectores, con varios
-            críticos, marcados como ejemplo. Reemplaza los registros actuales.
+            críticos, marcados como ejemplo. Reemplaza los registros actuales en la nube.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -107,8 +114,18 @@ export function Configuracion() {
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => {
-                    cargarEjemplos()
-                    toast.success('Datos de ejemplo cargados')
+                    if (!userId) {
+                      toast.error('Debes iniciar sesión')
+                      return
+                    }
+                    void (async () => {
+                      try {
+                        await cargarEjemplos(userId)
+                        toast.success('Datos de ejemplo cargados')
+                      } catch (error) {
+                        toast.error(mensajeErrorSupabase(error))
+                      }
+                    })()
                   }}
                 >
                   Cargar ejemplos
@@ -123,7 +140,7 @@ export function Configuracion() {
         <CardHeader>
           <CardTitle className="text-critico">Borrar todos los datos</CardTitle>
           <CardDescription>
-            Elimina de forma permanente todos los factores guardados en este navegador.
+            Elimina de forma permanente todos los factores de tu cuenta en Supabase.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -146,8 +163,18 @@ export function Configuracion() {
                 <AlertDialogAction
                   className="bg-critico hover:bg-red-700"
                   onClick={() => {
-                    borrarTodo()
-                    toast.success('Todos los datos fueron eliminados')
+                    if (!userId) {
+                      toast.error('Debes iniciar sesión')
+                      return
+                    }
+                    void (async () => {
+                      try {
+                        await borrarTodo(userId)
+                        toast.success('Todos los datos fueron eliminados')
+                      } catch (error) {
+                        toast.error(mensajeErrorSupabase(error))
+                      }
+                    })()
                   }}
                 >
                   Sí, borrar todo

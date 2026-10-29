@@ -1,10 +1,13 @@
-import { BarChart3, CircleHelp, ClipboardList, FileText, Menu, Settings, X } from 'lucide-react'
+import { BarChart3, CircleHelp, ClipboardList, FileText, LogOut, Menu, Settings, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { toast } from 'sonner'
 import { ThemeBubbles, ThemeContentFigures } from '@/components/layout/ThemeBubbles'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
-import { Toaster } from '@/components/ui/sonner'
+import { Button } from '@/components/ui/button'
+import { mensajeErrorSupabase } from '@/lib/factoresApi'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
 import { aplicarApariencia, useThemeStore } from '@/store/useThemeStore'
 
@@ -60,9 +63,47 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   )
 }
 
+function CuentaSidebar() {
+  const email = useAuthStore((s) => s.user?.email)
+  const signOut = useAuthStore((s) => s.signOut)
+
+  async function cerrarSesion() {
+    try {
+      await signOut()
+      toast.success('Sesión cerrada')
+    } catch (error) {
+      toast.error(mensajeErrorSupabase(error))
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {email ? (
+        <p className="truncate text-[11px] text-sidebar-muted" title={email}>
+          {email}
+        </p>
+      ) : null}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-8 w-full justify-start gap-2 px-2 text-sidebar-muted"
+        onClick={() => void cerrarSesion()}
+      >
+        <LogOut className="h-3.5 w-3.5" aria-hidden />
+        Cerrar sesión
+      </Button>
+      <p className="text-[11px] leading-relaxed text-sidebar-muted">
+        Los datos se sincronizan con Supabase.
+      </p>
+    </div>
+  )
+}
+
 export function AppLayout() {
   const [abierto, setAbierto] = useState(false)
   const hayEjemplos = usePestelStore((s) => s.factores.some((f) => f.esEjemplo))
+  const syncError = usePestelStore((s) => s.error)
   const tema = useThemeStore((s) => s.tema)
   const sector = useThemeStore((s) => s.sector)
 
@@ -87,9 +128,7 @@ export function AppLayout() {
         </div>
         <div className="space-y-3">
           <ThemeToggle />
-          <p className="text-[11px] leading-relaxed text-sidebar-muted">
-            Los datos se guardan solo en este navegador.
-          </p>
+          <CuentaSidebar />
         </div>
       </aside>
 
@@ -113,16 +152,27 @@ export function AppLayout() {
         {abierto ? (
           <div className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setAbierto(false)}>
             <aside
-              className="glass h-full w-72 rounded-none border-y-0 border-l-0 p-5 pt-20"
+              className="glass flex h-full w-72 flex-col rounded-none border-y-0 border-l-0 p-5 pt-20"
               onClick={(e) => e.stopPropagation()}
             >
-              <NavItems onNavigate={() => setAbierto(false)} />
+              <div className="flex-1">
+                <NavItems onNavigate={() => setAbierto(false)} />
+              </div>
+              <CuentaSidebar />
             </aside>
           </div>
         ) : null}
 
         <main id="contenido" className="relative min-w-0 px-4 py-6 lg:px-8 lg:py-8">
           <ThemeContentFigures />
+          {syncError ? (
+            <div
+              role="alert"
+              className="glass relative mb-6 rounded-xl px-4 py-3 text-sm text-critico"
+            >
+              No se pudieron sincronizar los datos: {syncError}
+            </div>
+          ) : null}
           {hayEjemplos ? (
             <div
               role="status"
@@ -136,7 +186,6 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
-      <Toaster position="top-right" richColors />
     </div>
   )
 }

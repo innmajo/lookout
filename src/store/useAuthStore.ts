@@ -1,0 +1,72 @@
+import type { Session, User } from '@supabase/supabase-js'
+import { create } from 'zustand'
+import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase'
+
+interface AuthState {
+  session: Session | null
+  user: User | null
+  initializing: boolean
+  ready: boolean
+  setSession: (session: Session | null) => void
+  setInitializing: (value: boolean) => void
+  signIn: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>
+  signOut: () => Promise<void>
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  session: null,
+  user: null,
+  initializing: true,
+  ready: false,
+  setSession: (session) =>
+    set({
+      session,
+      user: session?.user ?? null,
+      ready: true,
+      initializing: false,
+    }),
+  setInitializing: (initializing) => set({ initializing }),
+  signIn: async (email, password) => {
+    const { error } = await requireSupabase().auth.signInWithPassword({ email, password })
+    if (error) throw error
+  },
+  signUp: async (email, password) => {
+    const { data, error } = await requireSupabase().auth.signUp({ email, password })
+    if (error) throw error
+    return { needsEmailConfirmation: !data.session }
+  },
+  signOut: async () => {
+    const { error } = await requireSupabase().auth.signOut()
+    if (error) throw error
+    set({ session: null, user: null })
+  },
+}))
+
+let authListenerBound = false
+
+/** Inicializa sesión y suscripción a cambios de auth. Idempotente. */
+export function bootstrapAuth() {
+  if (!isSupabaseConfigured) {
+    useAuthStore.setState({ initializing: false, ready: true, session: null, user: null })
+    return () => undefined
+  }
+
+  if (authListenerBound) return () => undefined
+  authListenerBound = true
+
+  const client = requireSupabase()
+
+  client.auth.getSession().then(({ data }) => {
+    useAuthStore.getState().setSession(data.session)
+  })
+
+  const { data } = client.auth.onAuthStateChange((_event, session) => {
+    useAuthStore.getState().setSession(session)
+  })
+
+  return () => {
+    data.subscription.unsubscribe()
+    authListenerBound = false
+  }
+}

@@ -32,6 +32,8 @@ import { copAUsd, formatearCOP, formatearUSD, tieneValor } from '@/lib/dinero'
 import { calcularPrioridad } from '@/lib/prioridad'
 import { LISTA_SECTORES, SECTORES, type SectorId } from '@/lib/sectores'
 import { formatearFecha } from '@/lib/utils'
+import { mensajeErrorSupabase } from '@/lib/factoresApi'
+import { useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
 import {
   CATEGORIAS,
@@ -49,6 +51,7 @@ import {
 type Orden = 'fecha-desc' | 'fecha-asc' | 'prioridad-desc' | 'prioridad-asc'
 
 export function Registro() {
+  const userId = useAuthStore((s) => s.user?.id)
   const factores = usePestelStore((s) => s.factores)
   const agregarFactor = usePestelStore((s) => s.agregarFactor)
   const actualizarFactor = usePestelStore((s) => s.actualizarFactor)
@@ -92,16 +95,28 @@ export function Registro() {
     })
   }, [factores, busqueda, sector, categoria, tipo, impacto, plazo, orden])
 
-  function handleCrear(values: FactorFormValues) {
-    agregarFactor(values)
-    toast.success('Factor registrado correctamente')
+  async function handleCrear(values: FactorFormValues) {
+    if (!userId) {
+      toast.error('Debes iniciar sesión')
+      return
+    }
+    try {
+      await agregarFactor(userId, values)
+      toast.success('Factor registrado correctamente')
+    } catch (error) {
+      toast.error(mensajeErrorSupabase(error))
+    }
   }
 
-  function handleEditar(values: FactorFormValues) {
-    if (!editando) return
-    actualizarFactor(editando.id, values)
-    setEditando(null)
-    toast.success('Factor actualizado')
+  async function handleEditar(values: FactorFormValues) {
+    if (!editando || !userId) return
+    try {
+      await actualizarFactor(userId, editando.id, values)
+      setEditando(null)
+      toast.success('Factor actualizado')
+    } catch (error) {
+      toast.error(mensajeErrorSupabase(error))
+    }
   }
 
   return (
@@ -326,10 +341,16 @@ export function Registro() {
             <AlertDialogAction
               className="bg-critico hover:bg-red-700"
               onClick={() => {
-                if (!eliminando) return
-                eliminarFactor(eliminando.id)
-                setEliminando(null)
-                toast.success('Factor eliminado')
+                if (!eliminando || !userId) return
+                void (async () => {
+                  try {
+                    await eliminarFactor(userId, eliminando.id)
+                    setEliminando(null)
+                    toast.success('Factor eliminado')
+                  } catch (error) {
+                    toast.error(mensajeErrorSupabase(error))
+                  }
+                })()
               }}
             >
               Eliminar

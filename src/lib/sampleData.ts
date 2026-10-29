@@ -5,14 +5,15 @@ const BASE = new Date('2026-10-01T12:00:00.000Z').getTime()
 
 function ejemplo(
   index: number,
-  data: Omit<FactorPestel, 'id' | 'fechaRegistro' | 'esEjemplo'> & {
+  data: Omit<FactorPestel, 'id' | 'fechaRegistro' | 'esEjemplo' | 'sector'> & {
     sector?: SectorId
     valorCOP?: number
   },
 ): FactorPestel {
+  const { sector, ...rest } = data
   return {
-    sector: 'agro',
-    ...data,
+    ...rest,
+    sector: sector ?? 'agro',
     id: `ejemplo-${String(index).padStart(2, '0')}`,
     fechaRegistro: new Date(BASE + index * 86_400_000).toISOString(),
     esEjemplo: true,
