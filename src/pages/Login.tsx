@@ -8,11 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { mensajeErrorSupabase } from '@/lib/factoresApi'
-import { LISTA_SECTORES, type SectorId } from '@/lib/sectores'
-import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/store/useAuthStore'
-import { aplicarApariencia, useThemeStore } from '@/store/useThemeStore'
 import {
   Select,
   SelectContent,
@@ -20,8 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { mensajeErrorSupabase } from '@/lib/factoresApi'
+import { LISTA_SECTORES, type SectorId } from '@/lib/sectores'
+import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/useAuthStore'
+import { aplicarApariencia, useThemeStore } from '@/store/useThemeStore'
 
 type Modo = 'entrar' | 'registrar'
+type PasoRegistro = 'empresa' | 'responsable'
 
 const REGLAS_PASSWORD = [
   {
@@ -69,6 +70,7 @@ export function Login() {
   const tema = useThemeStore((s) => s.tema)
   const sector = useThemeStore((s) => s.sector)
   const [modo, setModo] = useState<Modo>('entrar')
+  const [pasoRegistro, setPasoRegistro] = useState<PasoRegistro>('empresa')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [empresa, setEmpresa] = useState(EMPRESA_VACIA)
@@ -77,6 +79,12 @@ export function Login() {
 
   const checklist = useMemo(() => evaluarPassword(password), [password])
   const passwordValida = checklist.every((regla) => regla.ok)
+
+  const empresaPasoCompleto =
+    empresa.nombreEmpresa.trim().length > 0 &&
+    empresa.nit.trim().length > 0 &&
+    empresa.direccion.trim().length > 0 &&
+    empresa.ciudad.trim().length > 0
 
   useEffect(() => {
     aplicarApariencia(tema, sector)
@@ -97,11 +105,26 @@ export function Login() {
     setModo(siguiente)
     setPassword('')
     setMostrarPassword(false)
+    setPasoRegistro('empresa')
     if (siguiente === 'entrar') setEmpresa(EMPRESA_VACIA)
+  }
+
+  function irAResponsable() {
+    if (!empresaPasoCompleto) {
+      toast.error('Complete los datos de la empresa')
+      return
+    }
+    setPasoRegistro('responsable')
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (modo === 'registrar' && pasoRegistro === 'empresa') {
+      irAResponsable()
+      return
+    }
+
     if (modo === 'registrar' && !passwordValida) {
       toast.error('La contraseña no cumple los requisitos')
       return
@@ -164,65 +187,100 @@ export function Login() {
               </div>
             </div>
             <CardTitle className="text-xl">
-              {modo === 'entrar' ? 'Iniciar sesión' : 'Registrar empresa'}
+              {modo === 'entrar'
+                ? 'Iniciar sesión'
+                : pasoRegistro === 'empresa'
+                  ? 'Datos de la empresa'
+                  : 'Responsable'}
             </CardTitle>
+            {modo === 'registrar' ? (
+              <p className="text-xs text-muted-foreground">
+                Paso {pasoRegistro === 'empresa' ? '1' : '2'} de 2
+              </p>
+            ) : null}
           </CardHeader>
 
           <CardContent className="relative">
             <form className="space-y-4" onSubmit={onSubmit}>
-              {modo === 'registrar' ? (
-                <>
-                  <div className="space-y-3">
-                    <p className="section-title">Empresa</p>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="nombreEmpresa">Nombre de la empresa</Label>
-                      <Input
-                        id="nombreEmpresa"
-                        required
-                        value={empresa.nombreEmpresa}
-                        onChange={(e) => setCampoEmpresa('nombreEmpresa', e.target.value)}
-                        placeholder="Razón social o nombre comercial"
-                        autoComplete="organization"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="nit">NIT</Label>
-                      <Input
-                        id="nit"
-                        required
-                        value={empresa.nit}
-                        onChange={(e) => setCampoEmpresa('nit', e.target.value)}
-                        placeholder="Número de identificación tributaria"
-                        inputMode="numeric"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="sector">Sector</Label>
-                      <Select
-                        value={empresa.sector}
-                        onValueChange={(v) => {
-                          setCampoEmpresa('sector', v as SectorId)
-                          useThemeStore.getState().setSectorFijo(v as SectorId)
-                        }}
-                      >
-                        <SelectTrigger id="sector">
-                          <SelectValue placeholder="Seleccione el sector" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LISTA_SECTORES.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Queda fijo para la empresa: define los pesos PESTEL y el color de Lookout.
-                      </p>
-                    </div>
+              {modo === 'registrar' && pasoRegistro === 'empresa' ? (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="nombreEmpresa">Nombre de la empresa</Label>
+                    <Input
+                      id="nombreEmpresa"
+                      required
+                      value={empresa.nombreEmpresa}
+                      onChange={(e) => setCampoEmpresa('nombreEmpresa', e.target.value)}
+                      placeholder="Razón social o nombre comercial"
+                      autoComplete="organization"
+                    />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="nit">NIT</Label>
+                    <Input
+                      id="nit"
+                      required
+                      value={empresa.nit}
+                      onChange={(e) => setCampoEmpresa('nit', e.target.value)}
+                      placeholder="Número de identificación tributaria"
+                      inputMode="numeric"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sector">Sector</Label>
+                    <Select
+                      value={empresa.sector}
+                      onValueChange={(v) => {
+                        setCampoEmpresa('sector', v as SectorId)
+                        useThemeStore.getState().setSectorFijo(v as SectorId)
+                      }}
+                    >
+                      <SelectTrigger id="sector">
+                        <SelectValue placeholder="Seleccione el sector" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LISTA_SECTORES.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Queda fijo para la empresa: define los pesos PESTEL y el color de Lookout.
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="direccion">Dirección</Label>
+                    <Input
+                      id="direccion"
+                      required
+                      value={empresa.direccion}
+                      onChange={(e) => setCampoEmpresa('direccion', e.target.value)}
+                      placeholder="Dirección de la empresa"
+                      autoComplete="street-address"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ciudad">Ciudad</Label>
+                    <Input
+                      id="ciudad"
+                      required
+                      value={empresa.ciudad}
+                      onChange={(e) => setCampoEmpresa('ciudad', e.target.value)}
+                      placeholder="Ciudad"
+                      autoComplete="address-level2"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">
+                    Siguiente
+                  </Button>
+                </div>
+              ) : null}
 
+              {modo === 'registrar' && pasoRegistro === 'responsable' ? (
+                <>
                   <div className="space-y-3">
                     <p className="section-title">Responsable</p>
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -261,121 +319,150 @@ export function Login() {
                         autoComplete="off"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="direccion">Dirección</Label>
-                      <Input
-                        id="direccion"
-                        required
-                        value={empresa.direccion}
-                        onChange={(e) => setCampoEmpresa('direccion', e.target.value)}
-                        placeholder="Dirección de la empresa"
-                        autoComplete="street-address"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="ciudad">Ciudad</Label>
-                      <Input
-                        id="ciudad"
-                        required
-                        value={empresa.ciudad}
-                        onChange={(e) => setCampoEmpresa('ciudad', e.target.value)}
-                        placeholder="Ciudad"
-                        autoComplete="address-level2"
-                      />
-                    </div>
                   </div>
 
                   <div className="space-y-3">
                     <p className="section-title">Acceso</p>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email">Correo</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="correo@empresa.com"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="password">Contraseña</Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={mostrarPassword ? 'text' : 'password'}
+                          autoComplete="new-password"
+                          required
+                          minLength={6}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="pr-10"
+                          placeholder="Crea una contraseña segura"
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-primary"
+                          onClick={() => setMostrarPassword((v) => !v)}
+                          aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                          aria-pressed={mostrarPassword}
+                        >
+                          {mostrarPassword ? (
+                            <EyeOff className="h-4 w-4" aria-hidden />
+                          ) : (
+                            <Eye className="h-4 w-4" aria-hidden />
+                          )}
+                        </button>
+                      </div>
+                      <ul className="mt-2 space-y-1.5" aria-live="polite">
+                        {checklist.map((regla) => (
+                          <li
+                            key={regla.id}
+                            className={cn(
+                              'flex items-center gap-2 text-xs transition-colors',
+                              regla.ok ? 'text-emerald-400' : 'text-muted-foreground',
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                'flex h-4 w-4 items-center justify-center rounded-full',
+                                regla.ok ? 'bg-emerald-500/20 text-emerald-400' : 'bg-foreground/5',
+                              )}
+                              aria-hidden
+                            >
+                              {regla.ok ? (
+                                <Check className="h-3 w-3" />
+                              ) : password.length > 0 ? (
+                                <X className="h-3 w-3 opacity-70" />
+                              ) : (
+                                <Circle className="h-2.5 w-2.5 opacity-50" />
+                              )}
+                            </span>
+                            {regla.label}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setPasoRegistro('empresa')}
+                    >
+                      Volver
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={enviando || !passwordValida}
+                    >
+                      {enviando ? 'Espera…' : 'Registrar empresa'}
+                    </Button>
                   </div>
                 </>
               ) : null}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Correo</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="correo@empresa.com"
-                />
-              </div>
+              {modo === 'entrar' ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">Correo</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="correo@empresa.com"
+                    />
+                  </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Contraseña</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={mostrarPassword ? 'text' : 'password'}
-                    autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'}
-                    required
-                    minLength={modo === 'registrar' ? 6 : undefined}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pr-10"
-                    placeholder={modo === 'registrar' ? 'Crea una contraseña segura' : 'Tu contraseña'}
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-primary"
-                    onClick={() => setMostrarPassword((v) => !v)}
-                    aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    aria-pressed={mostrarPassword}
-                  >
-                    {mostrarPassword ? (
-                      <EyeOff className="h-4 w-4" aria-hidden />
-                    ) : (
-                      <Eye className="h-4 w-4" aria-hidden />
-                    )}
-                  </button>
-                </div>
-
-                {modo === 'registrar' ? (
-                  <ul className="mt-2 space-y-1.5" aria-live="polite">
-                    {checklist.map((regla) => (
-                      <li
-                        key={regla.id}
-                        className={cn(
-                          'flex items-center gap-2 text-xs transition-colors',
-                          regla.ok ? 'text-emerald-400' : 'text-muted-foreground',
-                        )}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={mostrarPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pr-10"
+                        placeholder="Tu contraseña"
+                      />
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-primary"
+                        onClick={() => setMostrarPassword((v) => !v)}
+                        aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        aria-pressed={mostrarPassword}
                       >
-                        <span
-                          className={cn(
-                            'flex h-4 w-4 items-center justify-center rounded-full',
-                            regla.ok ? 'bg-emerald-500/20 text-emerald-400' : 'bg-foreground/5',
-                          )}
-                          aria-hidden
-                        >
-                          {regla.ok ? (
-                            <Check className="h-3 w-3" />
-                          ) : password.length > 0 ? (
-                            <X className="h-3 w-3 opacity-70" />
-                          ) : (
-                            <Circle className="h-2.5 w-2.5 opacity-50" />
-                          )}
-                        </span>
-                        {regla.label}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
+                        {mostrarPassword ? (
+                          <EyeOff className="h-4 w-4" aria-hidden />
+                        ) : (
+                          <Eye className="h-4 w-4" aria-hidden />
+                        )}
+                      </button>
+                    </div>
+                  </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={enviando || (modo === 'registrar' && !passwordValida)}
-              >
-                {enviando
-                  ? 'Espera…'
-                  : modo === 'entrar'
-                    ? 'Entrar'
-                    : 'Registrar empresa'}
-              </Button>
+                  <Button type="submit" className="w-full" disabled={enviando}>
+                    {enviando ? 'Espera…' : 'Entrar'}
+                  </Button>
+                </>
+              ) : null}
             </form>
 
             <p className="mt-5 text-center text-sm text-muted-foreground">

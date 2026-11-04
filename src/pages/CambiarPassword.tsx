@@ -33,6 +33,7 @@ const REGLAS = [
 export function CambiarPassword() {
   const navigate = useNavigate()
   const cambiarPassword = useAuthStore((s) => s.cambiarPassword)
+  const signOut = useAuthStore((s) => s.signOut)
   const [password, setPassword] = useState('')
   const [confirmacion, setConfirmacion] = useState('')
   const [mostrar, setMostrar] = useState(false)
@@ -60,6 +61,15 @@ export function CambiarPassword() {
     } finally {
       setEnviando(false)
     }
+  }
+
+  async function volverAlLogin() {
+    try {
+      await signOut()
+    } catch {
+      // ignore
+    }
+    navigate('/login', { replace: true })
   }
 
   return (
@@ -137,6 +147,15 @@ export function CambiarPassword() {
               </div>
               <Button type="submit" className="w-full" disabled={enviando || !valida}>
                 {enviando ? 'Guardando…' : 'Guardar y continuar'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={enviando}
+                onClick={() => void volverAlLogin()}
+              >
+                Volver
               </Button>
             </form>
           </CardContent>
