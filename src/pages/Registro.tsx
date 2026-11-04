@@ -30,9 +30,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CATEGORIA_META } from '@/lib/constants'
 import { copAUsd, formatearCOP, formatearUSD, tieneValor } from '@/lib/dinero'
 import { calcularPrioridad } from '@/lib/prioridad'
-import { LISTA_SECTORES, SECTORES, type SectorId } from '@/lib/sectores'
+import { SECTORES } from '@/lib/sectores'
 import { formatearFecha } from '@/lib/utils'
 import { mensajeErrorSupabase } from '@/lib/factoresApi'
+import { puedeOperarFactores } from '@/lib/roles'
 import { useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
 import {
@@ -52,6 +53,10 @@ type Orden = 'fecha-desc' | 'fecha-asc' | 'prioridad-desc' | 'prioridad-asc'
 
 export function Registro() {
   const userId = useAuthStore((s) => s.user?.id)
+  const empresaId = useAuthStore((s) => s.empresa?.id)
+  const sectorEmpresa = useAuthStore((s) => s.empresa?.sector)
+  const rol = useAuthStore((s) => s.perfil?.rol)
+  const puedeEscribir = puedeOperarFactores(rol)
   const factores = usePestelStore((s) => s.factores)
   const agregarFactor = usePestelStore((s) => s.agregarFactor)
   const actualizarFactor = usePestelStore((s) => s.actualizarFactor)
@@ -59,7 +64,6 @@ export function Registro() {
 
   const trmUsd = usePestelStore((s) => s.trmUsd)
   const [busqueda, setBusqueda] = useState('')
-  const [sector, setSector] = useState<SectorId | 'todos'>('todos')
   const [categoria, setCategoria] = useState<Categoria | 'todas'>('todas')
   const [tipo, setTipo] = useState<Tipo | 'todos'>('todos')
   const [impacto, setImpacto] = useState<Impacto | 'todos'>('todos')
@@ -78,7 +82,6 @@ export function Registro() {
         SECTORES[factor.sector]?.nombre.toLowerCase().includes(texto)
       return (
         coincideTexto &&
-        (sector === 'todos' || factor.sector === sector) &&
         (categoria === 'todas' || factor.categoria === categoria) &&
         (tipo === 'todos' || factor.tipo === tipo) &&
         (impacto === 'todos' || factor.impacto === impacto) &&
@@ -93,15 +96,15 @@ export function Registro() {
       const pb = calcularPrioridad(b).puntaje
       return orden === 'prioridad-desc' ? pb - pa : pa - pb
     })
-  }, [factores, busqueda, sector, categoria, tipo, impacto, plazo, orden])
+  }, [factores, busqueda, categoria, tipo, impacto, plazo, orden])
 
   async function handleCrear(values: FactorFormValues) {
-    if (!userId) {
+    if (!userId || !empresaId || !sectorEmpresa) {
       toast.error('Debes iniciar sesión')
       return
     }
     try {
-      await agregarFactor(userId, values)
+      await agregarFactor(userId, empresaId, { ...values, sector: sectorEmpresa })
       toast.success('Factor registrado correctamente')
     } catch (error) {
       toast.error(mensajeErrorSupabase(error))
@@ -109,14 +112,31 @@ export function Registro() {
   }
 
   async function handleEditar(values: FactorFormValues) {
-    if (!editando || !userId) return
+    if (!editando || !userId || !empresaId || !sectorEmpresa) return
     try {
-      await actualizarFactor(userId, editando.id, values)
+      await actualizarFactor(userId, empresaId, editando.id, {
+        ...values,
+        sector: sectorEmpresa,
+      })
       setEditando(null)
       toast.success('Factor actualizado')
     } catch (error) {
       toast.error(mensajeErrorSupabase(error))
     }
+  }
+
+  if (rol === 'admin_empresa' || rol === 'sistema') {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <header className="mb-6">
+          <h1 className="text-2xl text-foreground">Registro</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            El administrador no participa en la digitación de factores. Gestione usuarios desde
+            Usuarios.
+          </p>
+        </header>
+      </div>
+    )
   }
 
   return (
@@ -128,17 +148,24 @@ export function Registro() {
         </p>
       </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Nuevo factor</CardTitle>
-          <CardDescription>
-            Incluya el sector (define el peso PESTEL) y, si puede, lo que se perdería o se ganaría.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FactorForm key={factores.length} onSubmit={handleCrear} submitLabel="Guardar factor" />
-        </CardContent>
-      </Card>
+      {puedeEscribir ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Nuevo factor</CardTitle>
+            <CardDescription>
+              El sector es el de su empresa ({sectorEmpresa ? SECTORES[sectorEmpresa].nombre : '—'}).
+              Si puede, indique lo que se perdería o se ganaría.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FactorForm key={factores.length} onSubmit={handleCrear} submitLabel="Guardar factor" />
+          </CardContent>
+        </Card>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Su rol solo permite consultar factores. La digitación corresponde al digitador.
+        </p>
+      )}
 
       <Card>
         <CardHeader>
@@ -148,14 +175,7 @@ export function Registro() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <FiltroSelect
-              id="filtro-sector"
-              label="Sector"
-              value={sector}
-              onChange={(v) => setSector(v as SectorId | 'todos')}
-              opciones={[['todos', 'Todos'], ...LISTA_SECTORES.map((s) => [s.id, s.nombre] as const)]}
-            />
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div className="xl:col-span-2">
               <Label htmlFor="busqueda">Búsqueda</Label>
               <div className="relative mt-1.5">
@@ -217,7 +237,9 @@ export function Registro() {
           {filtrados.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
               {factores.length === 0
-                ? 'No hay registros todavía. Complete el formulario de arriba o cargue datos de ejemplo.'
+                ? puedeEscribir
+                  ? 'No hay registros todavía. Complete el formulario de arriba o cargue datos de ejemplo.'
+                  : 'No hay registros todavía.'
                 : 'Ningún factor coincide con la búsqueda o los filtros.'}
             </div>
           ) : (
@@ -233,7 +255,7 @@ export function Registro() {
                   <TableHead>Plazo</TableHead>
                   <TableHead>Prioridad</TableHead>
                   <TableHead>Fecha</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  {puedeEscribir ? <TableHead className="text-right">Acciones</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -280,28 +302,30 @@ export function Registro() {
                         <SemaforoBadge factor={factor} mostrarPuntaje />
                       </TableCell>
                       <TableCell>{formatearFecha(factor.fechaRegistro)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            aria-label={`Editar factor ${factor.categoria}`}
-                            onClick={() => setEditando(factor)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            aria-label={`Eliminar factor ${factor.categoria}`}
-                            onClick={() => setEliminando(factor)}
-                          >
-                            <Trash2 className="h-4 w-4 text-critico" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {puedeEscribir ? (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label={`Editar factor ${factor.categoria}`}
+                              onClick={() => setEditando(factor)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label={`Eliminar factor ${factor.categoria}`}
+                              onClick={() => setEliminando(factor)}
+                            >
+                              <Trash2 className="h-4 w-4 text-critico" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   )
                 })}
@@ -344,7 +368,11 @@ export function Registro() {
                 if (!eliminando || !userId) return
                 void (async () => {
                   try {
-                    await eliminarFactor(userId, eliminando.id)
+                    if (!empresaId) {
+                      toast.error('Sin empresa')
+                      return
+                    }
+                    await eliminarFactor(empresaId, eliminando.id)
                     setEliminando(null)
                     toast.success('Factor eliminado')
                   } catch (error) {

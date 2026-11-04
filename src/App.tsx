@@ -1,5 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { AuthBootstrap, GuestOnly, RequireAuth } from '@/components/auth/AuthGate'
+import {
+  AuthBootstrap,
+  GuestOnly,
+  RequireAdminEmpresa,
+  RequireAuth,
+} from '@/components/auth/AuthGate'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Configuracion } from '@/pages/Configuracion'
 import { Dashboard } from '@/pages/Dashboard'
@@ -7,6 +12,7 @@ import { Informacion } from '@/pages/Informacion'
 import { Login } from '@/pages/Login'
 import { Registro } from '@/pages/Registro'
 import { Reportes } from '@/pages/Reportes'
+import { Usuarios } from '@/pages/Usuarios'
 import { Toaster } from '@/components/ui/sonner'
 
 export default function App() {
@@ -26,6 +32,9 @@ export default function App() {
               <Route path="/reportes" element={<Reportes />} />
               <Route path="/informacion" element={<Informacion />} />
               <Route path="/configuracion" element={<Configuracion />} />
+              <Route element={<RequireAdminEmpresa />}>
+                <Route path="/usuarios" element={<Usuarios />} />
+              </Route>
             </Route>
           </Route>
 

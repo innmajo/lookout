@@ -1,4 +1,4 @@
-import { esSectorId } from '@/lib/sectores'
+import { esSectorId, type SectorId } from '@/lib/sectores'
 import { requireSupabase } from '@/lib/supabase'
 import type { FactorInsert, FactorRow } from '@/types/database'
 import type { FactorFormValues, FactorPestel } from '@/types/pestel'
@@ -44,9 +44,16 @@ export function rowToFactor(row: FactorRow): FactorPestel {
   }
 }
 
-function valuesToInsert(userId: string, values: FactorFormValues, extras?: Partial<FactorInsert>): FactorInsert {
+function valuesToInsert(
+  userId: string,
+  empresaId: string,
+  values: FactorFormValues,
+  extras?: Partial<FactorInsert>,
+): FactorInsert {
   return {
     user_id: userId,
+    empresa_id: empresaId,
+    creado_por: userId,
     categoria: values.categoria,
     descripcion: values.descripcion.trim(),
     tipo: values.tipo,
@@ -59,21 +66,25 @@ function valuesToInsert(userId: string, values: FactorFormValues, extras?: Parti
   }
 }
 
-export async function fetchFactores(userId: string): Promise<FactorPestel[]> {
+export async function fetchFactores(empresaId: string): Promise<FactorPestel[]> {
   const { data, error } = await requireSupabase()
     .from('factores')
     .select('*')
-    .eq('user_id', userId)
+    .eq('empresa_id', empresaId)
     .order('fecha_registro', { ascending: false })
 
   if (error) throw error
   return (data ?? []).map(rowToFactor)
 }
 
-export async function insertFactor(userId: string, values: FactorFormValues): Promise<FactorPestel> {
+export async function insertFactor(
+  userId: string,
+  empresaId: string,
+  values: FactorFormValues,
+): Promise<FactorPestel> {
   const { data, error } = await requireSupabase()
     .from('factores')
-    .insert(valuesToInsert(userId, values))
+    .insert(valuesToInsert(userId, empresaId, values))
     .select('*')
     .single()
 
@@ -83,18 +94,18 @@ export async function insertFactor(userId: string, values: FactorFormValues): Pr
 
 export async function updateFactor(
   userId: string,
+  empresaId: string,
   id: string,
   values: FactorFormValues,
 ): Promise<FactorPestel> {
   const { data, error } = await requireSupabase()
     .from('factores')
     .update({
-      ...valuesToInsert(userId, values),
-      user_id: userId,
+      ...valuesToInsert(userId, empresaId, values),
       es_ejemplo: false,
     })
     .eq('id', id)
-    .eq('user_id', userId)
+    .eq('empresa_id', empresaId)
     .select('*')
     .single()
 
@@ -102,39 +113,44 @@ export async function updateFactor(
   return rowToFactor(data)
 }
 
-export async function deleteFactor(userId: string, id: string): Promise<void> {
+export async function deleteFactor(empresaId: string, id: string): Promise<void> {
   const { error } = await requireSupabase()
     .from('factores')
     .delete()
     .eq('id', id)
-    .eq('user_id', userId)
+    .eq('empresa_id', empresaId)
 
   if (error) throw error
 }
 
-export async function deleteAllFactores(userId: string): Promise<void> {
-  const { error } = await requireSupabase().from('factores').delete().eq('user_id', userId)
+export async function deleteAllFactores(empresaId: string): Promise<void> {
+  const { error } = await requireSupabase().from('factores').delete().eq('empresa_id', empresaId)
   if (error) throw error
 }
 
 export async function replaceWithEjemplos(
   userId: string,
+  empresaId: string,
+  sector: SectorId,
   ejemplos: FactorPestel[],
 ): Promise<FactorPestel[]> {
   const client = requireSupabase()
-  const { error: delError } = await client.from('factores').delete().eq('user_id', userId)
+  const { error: delError } = await client.from('factores').delete().eq('empresa_id', empresaId)
   if (delError) throw delError
 
-  if (ejemplos.length === 0) return []
+  const delSector = ejemplos.filter((f) => f.sector === sector)
+  if (delSector.length === 0) return []
 
-  const rows: FactorInsert[] = ejemplos.map((f) => ({
+  const rows: FactorInsert[] = delSector.map((f) => ({
     user_id: userId,
+    empresa_id: empresaId,
+    creado_por: userId,
     categoria: f.categoria,
     descripcion: f.descripcion,
     tipo: f.tipo,
     impacto: f.impacto,
     plazo: f.plazo,
-    sector: f.sector,
+    sector: sector,
     valor_cop: f.valorCOP ?? null,
     fecha_registro: f.fechaRegistro,
     es_ejemplo: true,
@@ -145,11 +161,11 @@ export async function replaceWithEjemplos(
   return (data ?? []).map(rowToFactor)
 }
 
-export async function fetchTrm(userId: string): Promise<number | null> {
+export async function fetchTrmEmpresa(empresaId: string): Promise<number | null> {
   const { data, error } = await requireSupabase()
-    .from('perfiles')
+    .from('empresas')
     .select('trm_usd')
-    .eq('id', userId)
+    .eq('id', empresaId)
     .maybeSingle()
 
   if (error) throw error
@@ -158,10 +174,11 @@ export async function fetchTrm(userId: string): Promise<number | null> {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
-export async function upsertTrm(userId: string, trmUsd: number): Promise<void> {
+export async function upsertTrmEmpresa(empresaId: string, trmUsd: number): Promise<void> {
   const { error } = await requireSupabase()
-    .from('perfiles')
-    .upsert({ id: userId, trm_usd: trmUsd }, { onConflict: 'id' })
+    .from('empresas')
+    .update({ trm_usd: trmUsd })
+    .eq('id', empresaId)
 
   if (error) throw error
 }

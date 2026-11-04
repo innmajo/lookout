@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { puedeVerFactores } from '@/lib/roles'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { bootstrapAuth, useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
@@ -27,8 +28,8 @@ function SetupSupabase() {
             <code className="text-foreground">.env.local</code> y pega las claves del proyecto.
           </li>
           <li>
-            Ejecuta el SQL de <code className="text-foreground">supabase/schema.sql</code> en el SQL
-            Editor.
+            Aplica las migraciones (`supabase db push` o el Action de GitHub) y despliega la función{' '}
+            <code className="text-foreground">crear-usuario</code>.
           </li>
           <li>
             Reinicia <code className="text-foreground">npm run dev</code>.
@@ -39,9 +40,13 @@ function SetupSupabase() {
   )
 }
 
-/** Escucha auth y carga factores del usuario autenticado. */
+/** Escucha auth, carga perfil/empresa y factores de la empresa. */
 export function AuthBootstrap({ children }: { children: ReactNode }) {
   const userId = useAuthStore((s) => s.user?.id ?? null)
+  const empresaId = useAuthStore((s) => s.empresa?.id ?? null)
+  const rol = useAuthStore((s) => s.perfil?.rol)
+  const cargarContexto = useAuthStore((s) => s.cargarContexto)
+  const limpiarContexto = useAuthStore((s) => s.limpiarContexto)
   const cargarDesdeNube = usePestelStore((s) => s.cargarDesdeNube)
   const limpiarLocal = usePestelStore((s) => s.limpiarLocal)
 
@@ -49,28 +54,49 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!userId) {
+      limpiarContexto()
       limpiarLocal()
       return
     }
-    void cargarDesdeNube(userId).catch(() => undefined)
-  }, [userId, cargarDesdeNube, limpiarLocal])
+    void cargarContexto(userId).catch(() => undefined)
+  }, [userId, cargarContexto, limpiarContexto, limpiarLocal])
+
+  useEffect(() => {
+    if (!empresaId) {
+      if (rol === 'sistema') {
+        limpiarLocal()
+      }
+      return
+    }
+    void cargarDesdeNube(empresaId).catch(() => undefined)
+  }, [empresaId, rol, cargarDesdeNube, limpiarLocal])
 
   return children
 }
 
-/** Exige sesión; si no hay, redirige a /login. */
+/** Exige sesión + perfil; si no hay, redirige a /login. */
 export function RequireAuth() {
   const location = useLocation()
   const initializing = useAuthStore((s) => s.initializing)
   const session = useAuthStore((s) => s.session)
+  const perfil = useAuthStore((s) => s.perfil)
+  const empresa = useAuthStore((s) => s.empresa)
   const loadingDatos = usePestelStore((s) => s.loading)
-  const hydratedUserId = usePestelStore((s) => s.hydratedUserId)
+  const hydratedEmpresaId = usePestelStore((s) => s.hydratedEmpresaId)
 
   if (!isSupabaseConfigured) return <SetupSupabase />
   if (initializing) return <PantallaCarga mensaje="Comprobando sesión…" />
   if (!session) return <Navigate to="/login" replace state={{ from: location }} />
-  if (loadingDatos || hydratedUserId !== session.user.id) {
-    return <PantallaCarga mensaje="Sincronizando factores…" />
+  if (!perfil) return <PantallaCarga mensaje="Cargando perfil…" />
+
+  if (perfil.rol === 'sistema') {
+    return <Outlet />
+  }
+
+  if (!empresa) return <PantallaCarga mensaje="Cargando empresa…" />
+
+  if (puedeVerFactores(perfil.rol) && (loadingDatos || hydratedEmpresaId !== empresa.id)) {
+    return <PantallaCarga mensaje="Sincronizando datos de la empresa…" />
   }
 
   return <Outlet />
@@ -84,5 +110,14 @@ export function GuestOnly() {
   if (!isSupabaseConfigured) return <SetupSupabase />
   if (initializing) return <PantallaCarga mensaje="Comprobando sesión…" />
   if (session) return <Navigate to="/dashboard" replace />
+  return <Outlet />
+}
+
+/** Solo admin_empresa (o sistema). */
+export function RequireAdminEmpresa() {
+  const rol = useAuthStore((s) => s.perfil?.rol)
+  if (rol !== 'admin_empresa' && rol !== 'sistema') {
+    return <Navigate to="/dashboard" replace />
+  }
   return <Outlet />
 }

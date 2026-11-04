@@ -7,8 +7,10 @@ export type Tema = 'light' | 'dark'
 interface ThemeState {
   tema: Tema
   sector: SectorId
+  sectorFijo: boolean
   setTema: (tema: Tema) => void
-  setSector: (sector: SectorId) => void
+  /** Solo para hidratar desde la empresa. No usar en UI de configuración. */
+  setSectorFijo: (sector: SectorId) => void
 }
 
 export function aplicarApariencia(tema: Tema, sector: SectorId) {
@@ -33,18 +35,20 @@ export const useThemeStore = create<ThemeState>()(
       return {
         tema: inicial.tema,
         sector: inicial.sector,
+        sectorFijo: false,
         setTema: (tema) => {
           aplicarApariencia(tema, get().sector)
           set({ tema })
         },
-        setSector: (sector) => {
+        setSectorFijo: (sector) => {
           aplicarApariencia(get().tema, sector)
-          set({ sector })
+          set({ sector, sectorFijo: true })
         },
       }
     },
     {
       name: 'lookout-theme',
+      partialize: (state) => ({ tema: state.tema, sector: state.sector, sectorFijo: state.sectorFijo }),
       onRehydrateStorage: () => (state) => {
         aplicarApariencia(state?.tema ?? 'dark', state?.sector ?? 'agro')
       },

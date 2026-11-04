@@ -1,45 +1,81 @@
+import type { Rol } from '@/lib/roles'
+import type { SectorId } from '@/lib/sectores'
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export interface Database {
   public: {
     Tables: {
-      perfiles: {
+      empresas: {
         Row: {
           id: string
-          trm_usd: number
-          nombre_empresa: string | null
-          nit: string | null
-          responsable_nombre: string | null
-          responsable_apellido: string | null
-          responsable_cedula: string | null
+          nombre: string
+          nit: string
           direccion: string | null
           ciudad: string | null
+          sector: SectorId
+          trm_usd: number
+          activa: boolean
           created_at: string
           updated_at: string
         }
         Insert: {
-          id: string
-          trm_usd?: number
-          nombre_empresa?: string | null
-          nit?: string | null
-          responsable_nombre?: string | null
-          responsable_apellido?: string | null
-          responsable_cedula?: string | null
+          id?: string
+          nombre: string
+          nit: string
           direccion?: string | null
           ciudad?: string | null
+          sector: SectorId
+          trm_usd?: number
+          activa?: boolean
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          trm_usd?: number
-          nombre_empresa?: string | null
-          nit?: string | null
-          responsable_nombre?: string | null
-          responsable_apellido?: string | null
-          responsable_cedula?: string | null
+          nombre?: string
+          nit?: string
           direccion?: string | null
           ciudad?: string | null
+          sector?: SectorId
+          trm_usd?: number
+          activa?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      perfiles: {
+        Row: {
+          id: string
+          empresa_id: string | null
+          rol: Rol
+          activo: boolean
+          nombre: string | null
+          apellido: string | null
+          cedula: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          empresa_id?: string | null
+          rol: Rol
+          activo?: boolean
+          nombre?: string | null
+          apellido?: string | null
+          cedula?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string | null
+          rol?: Rol
+          activo?: boolean
+          nombre?: string | null
+          apellido?: string | null
+          cedula?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -49,6 +85,8 @@ export interface Database {
         Row: {
           id: string
           user_id: string
+          empresa_id: string
+          creado_por: string | null
           categoria: string
           descripcion: string
           tipo: string
@@ -64,6 +102,8 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
+          empresa_id: string
+          creado_por?: string | null
           categoria: string
           descripcion: string
           tipo: string
@@ -79,6 +119,8 @@ export interface Database {
         Update: {
           id?: string
           user_id?: string
+          empresa_id?: string
+          creado_por?: string | null
           categoria?: string
           descripcion?: string
           tipo?: string
@@ -104,13 +146,20 @@ export interface Database {
 export type FactorRow = Database['public']['Tables']['factores']['Row']
 export type FactorInsert = Database['public']['Tables']['factores']['Insert']
 export type PerfilRow = Database['public']['Tables']['perfiles']['Row']
+export type EmpresaRow = Database['public']['Tables']['empresas']['Row']
 
 export interface DatosEmpresaRegistro {
   nombreEmpresa: string
   nit: string
+  sector: SectorId
   responsableNombre: string
   responsableApellido: string
   responsableCedula: string
   direccion: string
   ciudad: string
+}
+
+export interface SesionContexto {
+  perfil: PerfilRow
+  empresa: EmpresaRow | null
 }

@@ -1,23 +1,53 @@
-import { BarChart3, CircleHelp, ClipboardList, FileText, LogOut, Menu, Settings, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import {
+  BarChart3,
+  CircleHelp,
+  ClipboardList,
+  FileText,
+  LogOut,
+  Menu,
+  Settings,
+  Users,
+  X,
+} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ThemeBubbles, ThemeContentFigures } from '@/components/layout/ThemeBubbles'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { mensajeErrorSupabase } from '@/lib/factoresApi'
+import { puedeOperarFactores, ROL_ETIQUETA, type Rol } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
 import { aplicarApariencia, useThemeStore } from '@/store/useThemeStore'
 
-const NAV = [
-  { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
-  { to: '/registro', label: 'Registro', icon: ClipboardList },
-  { to: '/reportes', label: 'Reportes', icon: FileText },
-  { to: '/informacion', label: 'Información', icon: CircleHelp },
-  { to: '/configuracion', label: 'Configuración', icon: Settings },
-]
+function navPorRol(rol: Rol | null | undefined) {
+  if (rol === 'sistema') {
+    return [
+      { to: '/dashboard', label: 'Sistema', icon: BarChart3 },
+      { to: '/informacion', label: 'Información', icon: CircleHelp },
+    ]
+  }
+  if (rol === 'admin_empresa') {
+    return [
+      { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+      { to: '/usuarios', label: 'Usuarios', icon: Users },
+      { to: '/configuracion', label: 'Configuración', icon: Settings },
+      { to: '/informacion', label: 'Información', icon: CircleHelp },
+    ]
+  }
+  const items = [
+    { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+    { to: '/registro', label: 'Registro', icon: ClipboardList },
+    { to: '/reportes', label: 'Reportes', icon: FileText },
+    { to: '/informacion', label: 'Información', icon: CircleHelp },
+  ]
+  if (puedeOperarFactores(rol)) {
+    items.push({ to: '/configuracion', label: 'Configuración', icon: Settings })
+  }
+  return items
+}
 
 function Logo() {
   return (
@@ -36,9 +66,11 @@ function Logo() {
 }
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
+  const rol = useAuthStore((s) => s.perfil?.rol)
+  const items = useMemo(() => navPorRol(rol), [rol])
   return (
     <nav aria-label="Principal" className="flex flex-col gap-1">
-      {NAV.map((item) => {
+      {items.map((item) => {
         const Icon = item.icon
         return (
           <NavLink
@@ -65,6 +97,8 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 function CuentaSidebar() {
   const email = useAuthStore((s) => s.user?.email)
+  const rol = useAuthStore((s) => s.perfil?.rol)
+  const empresa = useAuthStore((s) => s.empresa)
   const signOut = useAuthStore((s) => s.signOut)
 
   async function cerrarSesion() {
@@ -81,6 +115,14 @@ function CuentaSidebar() {
       {email ? (
         <p className="truncate text-[11px] text-sidebar-muted" title={email}>
           {email}
+        </p>
+      ) : null}
+      {rol ? (
+        <p className="truncate text-[11px] text-sidebar-muted">{ROL_ETIQUETA[rol]}</p>
+      ) : null}
+      {empresa ? (
+        <p className="truncate text-[11px] text-sidebar-muted" title={empresa.nombre}>
+          {empresa.nombre}
         </p>
       ) : null}
       <Button

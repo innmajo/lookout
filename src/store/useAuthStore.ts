@@ -1,15 +1,21 @@
 import type { Session, User } from '@supabase/supabase-js'
 import { create } from 'zustand'
+import { esSectorId } from '@/lib/sectores'
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase'
-import type { DatosEmpresaRegistro } from '@/types/database'
+import { fetchSesionContexto } from '@/lib/usuariosApi'
+import { aplicarApariencia, useThemeStore } from '@/store/useThemeStore'
+import type { DatosEmpresaRegistro, EmpresaRow, PerfilRow } from '@/types/database'
 
 interface AuthState {
   session: Session | null
   user: User | null
+  perfil: PerfilRow | null
+  empresa: EmpresaRow | null
   initializing: boolean
   ready: boolean
   setSession: (session: Session | null) => void
-  setInitializing: (value: boolean) => void
+  cargarContexto: (userId: string) => Promise<void>
+  limpiarContexto: () => void
   signIn: (email: string, password: string) => Promise<void>
   signUp: (
     email: string,
@@ -19,9 +25,18 @@ interface AuthState {
   signOut: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+function aplicarSectorEmpresa(empresa: EmpresaRow | null) {
+  if (!empresa || !esSectorId(empresa.sector)) return
+  const tema = useThemeStore.getState().tema
+  useThemeStore.getState().setSectorFijo(empresa.sector)
+  aplicarApariencia(tema, empresa.sector)
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   user: null,
+  perfil: null,
+  empresa: null,
   initializing: true,
   ready: false,
   setSession: (session) =>
@@ -31,7 +46,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       ready: true,
       initializing: false,
     }),
-  setInitializing: (initializing) => set({ initializing }),
+  limpiarContexto: () => set({ perfil: null, empresa: null }),
+  cargarContexto: async (userId) => {
+    const ctx = await fetchSesionContexto(userId)
+    set({ perfil: ctx.perfil, empresa: ctx.empresa })
+    aplicarSectorEmpresa(ctx.empresa)
+  },
   signIn: async (email, password) => {
     const { error } = await requireSupabase().auth.signInWithPassword({ email, password })
     if (error) throw error
@@ -40,11 +60,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     const metadata = {
       nombre_empresa: empresa.nombreEmpresa.trim(),
       nit: empresa.nit.trim(),
+      sector: empresa.sector,
+      direccion: empresa.direccion.trim(),
+      ciudad: empresa.ciudad.trim(),
+      nombre: empresa.responsableNombre.trim(),
+      apellido: empresa.responsableApellido.trim(),
+      cedula: empresa.responsableCedula.trim(),
       responsable_nombre: empresa.responsableNombre.trim(),
       responsable_apellido: empresa.responsableApellido.trim(),
       responsable_cedula: empresa.responsableCedula.trim(),
-      direccion: empresa.direccion.trim(),
-      ciudad: empresa.ciudad.trim(),
+      rol: 'admin_empresa',
     }
 
     const { data, error } = await requireSupabase().auth.signUp({
@@ -54,18 +79,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     })
     if (error) throw error
 
-    const userId = data.user?.id
-    if (userId && data.session) {
-      const { error: perfilError } = await requireSupabase()
-        .from('perfiles')
-        .upsert(
-          {
-            id: userId,
-            ...metadata,
-          },
-          { onConflict: 'id' },
-        )
-      if (perfilError) throw perfilError
+    if (data.user?.id && data.session) {
+      await get().cargarContexto(data.user.id)
     }
 
     return { needsEmailConfirmation: !data.session }
@@ -73,7 +88,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     const { error } = await requireSupabase().auth.signOut()
     if (error) throw error
-    set({ session: null, user: null })
+    set({ session: null, user: null, perfil: null, empresa: null })
+    useThemeStore.setState({ sectorFijo: false })
   },
 }))
 

@@ -25,6 +25,11 @@ En el repo: **Settings → Secrets and variables → Actions → New repository 
 npx supabase login
 npx supabase link --project-ref pdhpqtgajvbvmfhblzhr
 npx supabase db push
+npx supabase functions deploy crear-usuario
 ```
+
+## Admin del sistema
+
+No se crea con el formulario. Use `scripts/seed-admin-sistema.mjs` con la `service_role` key.
 
 Los archivos sueltos `schema.sql` / `migration_*.sql` son referencia histórica; la fuente de verdad es `migrations/`.

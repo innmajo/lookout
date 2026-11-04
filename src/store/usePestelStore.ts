@@ -4,14 +4,15 @@ import {
   deleteAllFactores,
   deleteFactor,
   fetchFactores,
-  fetchTrm,
+  fetchTrmEmpresa,
   insertFactor,
   mensajeErrorSupabase,
   replaceWithEjemplos,
   updateFactor,
-  upsertTrm,
+  upsertTrmEmpresa,
 } from '@/lib/factoresApi'
 import { FACTORES_EJEMPLO } from '@/lib/sampleData'
+import type { SectorId } from '@/lib/sectores'
 import type { FactorFormValues, FactorPestel } from '@/types/pestel'
 
 interface PestelState {
@@ -19,15 +20,24 @@ interface PestelState {
   trmUsd: number
   loading: boolean
   error: string | null
-  hydratedUserId: string | null
-  cargarDesdeNube: (userId: string) => Promise<void>
+  hydratedEmpresaId: string | null
+  cargarDesdeNube: (empresaId: string) => Promise<void>
   limpiarLocal: () => void
   setTrmUsd: (trm: number) => Promise<void>
-  agregarFactor: (userId: string, values: FactorFormValues) => Promise<FactorPestel>
-  actualizarFactor: (userId: string, id: string, values: FactorFormValues) => Promise<void>
-  eliminarFactor: (userId: string, id: string) => Promise<void>
-  borrarTodo: (userId: string) => Promise<void>
-  cargarEjemplos: (userId: string) => Promise<void>
+  agregarFactor: (
+    userId: string,
+    empresaId: string,
+    values: FactorFormValues,
+  ) => Promise<FactorPestel>
+  actualizarFactor: (
+    userId: string,
+    empresaId: string,
+    id: string,
+    values: FactorFormValues,
+  ) => Promise<void>
+  eliminarFactor: (empresaId: string, id: string) => Promise<void>
+  borrarTodo: (empresaId: string) => Promise<void>
+  cargarEjemplos: (userId: string, empresaId: string, sector: SectorId) => Promise<void>
 }
 
 export const usePestelStore = create<PestelState>((set, get) => ({
@@ -35,7 +45,7 @@ export const usePestelStore = create<PestelState>((set, get) => ({
   trmUsd: TRM_POR_DEFECTO,
   loading: false,
   error: null,
-  hydratedUserId: null,
+  hydratedEmpresaId: null,
 
   limpiarLocal: () =>
     set({
@@ -43,26 +53,29 @@ export const usePestelStore = create<PestelState>((set, get) => ({
       trmUsd: TRM_POR_DEFECTO,
       loading: false,
       error: null,
-      hydratedUserId: null,
+      hydratedEmpresaId: null,
     }),
 
-  cargarDesdeNube: async (userId) => {
-    if (get().hydratedUserId === userId && !get().loading) return
+  cargarDesdeNube: async (empresaId) => {
+    if (get().hydratedEmpresaId === empresaId && !get().loading) return
     set({ loading: true, error: null })
     try {
-      const [factores, trm] = await Promise.all([fetchFactores(userId), fetchTrm(userId)])
+      const [factores, trm] = await Promise.all([
+        fetchFactores(empresaId),
+        fetchTrmEmpresa(empresaId),
+      ])
       set({
         factores,
         trmUsd: trm ?? TRM_POR_DEFECTO,
         loading: false,
-        hydratedUserId: userId,
+        hydratedEmpresaId: empresaId,
         error: null,
       })
     } catch (error) {
       set({
         loading: false,
         error: mensajeErrorSupabase(error),
-        hydratedUserId: userId,
+        hydratedEmpresaId: empresaId,
       })
       throw error
     }
@@ -70,44 +83,44 @@ export const usePestelStore = create<PestelState>((set, get) => ({
 
   setTrmUsd: async (trmUsd) => {
     const valor = trmUsd > 0 ? trmUsd : TRM_POR_DEFECTO
-    const userId = get().hydratedUserId
+    const empresaId = get().hydratedEmpresaId
     set({ trmUsd: valor })
-    if (!userId) return
+    if (!empresaId) return
     try {
-      await upsertTrm(userId, valor)
+      await upsertTrmEmpresa(empresaId, valor)
     } catch (error) {
       set({ error: mensajeErrorSupabase(error) })
       throw error
     }
   },
 
-  agregarFactor: async (userId, values) => {
-    const factor = await insertFactor(userId, values)
+  agregarFactor: async (userId, empresaId, values) => {
+    const factor = await insertFactor(userId, empresaId, values)
     set((state) => ({ factores: [factor, ...state.factores] }))
     return factor
   },
 
-  actualizarFactor: async (userId, id, values) => {
-    const actualizado = await updateFactor(userId, id, values)
+  actualizarFactor: async (userId, empresaId, id, values) => {
+    const actualizado = await updateFactor(userId, empresaId, id, values)
     set((state) => ({
       factores: state.factores.map((factor) => (factor.id === id ? actualizado : factor)),
     }))
   },
 
-  eliminarFactor: async (userId, id) => {
-    await deleteFactor(userId, id)
+  eliminarFactor: async (empresaId, id) => {
+    await deleteFactor(empresaId, id)
     set((state) => ({
       factores: state.factores.filter((factor) => factor.id !== id),
     }))
   },
 
-  borrarTodo: async (userId) => {
-    await deleteAllFactores(userId)
+  borrarTodo: async (empresaId) => {
+    await deleteAllFactores(empresaId)
     set({ factores: [] })
   },
 
-  cargarEjemplos: async (userId) => {
-    const factores = await replaceWithEjemplos(userId, FACTORES_EJEMPLO)
+  cargarEjemplos: async (userId, empresaId, sector) => {
+    const factores = await replaceWithEjemplos(userId, empresaId, sector, FACTORES_EJEMPLO)
     set({ factores })
   },
 }))

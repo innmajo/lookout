@@ -2,7 +2,11 @@
 
 Herramienta para registrar factores del entorno externo, priorizarlos con un semáforo ponderado por sector y exportar un informe.
 
-Los factores y la TRM viven en **Supabase** (Postgres + Auth). El tema y el sector de la organización siguen en el navegador.
+Los factores y la TRM viven en **Supabase** (Postgres + Auth), por **empresa**.
+
+Roles: administrador del sistema (seed), administrador de empresa (registro), y usuarios operativos (digitador, supervisor, auditor, aprobador) creados por el admin de empresa.
+
+El **sector se elige al registrar la empresa** y no se puede cambiar: fija pesos PESTEL y el color de la UI.
 
 ## Requisitos
 
@@ -25,8 +29,19 @@ VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
 ```
 
-3. **Migraciones automáticas:** al hacer push a `main`, el workflow `.github/workflows/supabase-migrate.yml` aplica `supabase/migrations/`. Configura una sola vez los secretos del repo (ver `supabase/README.md`).
-4. En **Authentication → Providers**, deja Email habilitado. Para desarrollo puedes desactivar **Confirm email** si no quieres verificar correo.
+3. **Migraciones:** al push a `main` corre el Action, o en local `npm run db:push` (ver `supabase/README.md`).
+4. Despliega la Edge Function de alta de usuarios: `npx supabase functions deploy crear-usuario`
+5. (Opcional) Admin del sistema:
+   `SUPABASE_SERVICE_ROLE_KEY=... ADMIN_EMAIL=... ADMIN_PASSWORD=... node scripts/seed-admin-sistema.mjs`
+6. En **Authentication → Providers**, deja Email habilitado. Para desarrollo puedes desactivar **Confirm email**.
+
+**Partida limpia:** la migración de roles borra factores y perfiles. Conviene borrar también usuarios viejos en Authentication → Users y volver a registrar empresas.
+
+| Ruta | Quién |
+|---|---|
+| `/usuarios` | Admin de empresa (crea digitador / supervisor / auditor / aprobador) |
+| `/registro` | Roles operativos (solo digitador escribe) |
+| `/configuracion` | Admin (TRM) y digitador (ejemplos) |
 
 ## Cómo correr el proyecto
 
@@ -48,12 +63,13 @@ npm run preview
 
 | Ruta | Uso |
 |---|---|
-| `/login` | Entrar o crear cuenta |
+| `/login` | Entrar o registrar empresa (sector fijo al alta) |
 | `/dashboard` | KPIs, gráficos, insights, matriz 3×3 y alertas |
-| `/registro` | Formulario PESTEL, tabla con filtros y edición |
+| `/usuarios` | Alta de usuarios de la empresa (admin) |
+| `/registro` | Formulario PESTEL y tabla (digitador escribe) |
 | `/reportes` | Vista previa y descarga PDF / Excel / CSV |
 | `/informacion` | Fórmulas, pesos por sector y matriz |
-| `/configuracion` | TRM, ejemplos, borrado |
+| `/configuracion` | TRM (admin), ejemplos/borrado (digitador) |
 
 ## Regla del semáforo
 

@@ -9,9 +9,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { mensajeErrorSupabase } from '@/lib/factoresApi'
+import { LISTA_SECTORES, type SectorId } from '@/lib/sectores'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/useAuthStore'
 import { aplicarApariencia, useThemeStore } from '@/store/useThemeStore'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 type Modo = 'entrar' | 'registrar'
 
@@ -44,6 +52,7 @@ function evaluarPassword(password: string) {
 const EMPRESA_VACIA = {
   nombreEmpresa: '',
   nit: '',
+  sector: 'agro' as SectorId,
   responsableNombre: '',
   responsableApellido: '',
   responsableCedula: '',
@@ -173,6 +182,30 @@ export function Login() {
                         inputMode="numeric"
                         autoComplete="off"
                       />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="sector">Sector</Label>
+                      <Select
+                        value={empresa.sector}
+                        onValueChange={(v) => {
+                          setCampoEmpresa('sector', v as SectorId)
+                          useThemeStore.getState().setSectorFijo(v as SectorId)
+                        }}
+                      >
+                        <SelectTrigger id="sector">
+                          <SelectValue placeholder="Seleccione el sector" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LISTA_SECTORES.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Queda fijo para la empresa: define los pesos PESTEL y el color de Lookout.
+                      </p>
                     </div>
                   </div>
 
