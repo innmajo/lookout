@@ -16,6 +16,19 @@ import { Registro } from '@/pages/Registro'
 import { Reportes } from '@/pages/Reportes'
 import { Usuarios } from '@/pages/Usuarios'
 import { Toaster } from '@/components/ui/sonner'
+import { useAuthStore } from '@/store/useAuthStore'
+
+function HomeRedirect() {
+  const rol = useAuthStore((s) => s.perfil?.rol)
+  if (rol === 'digitador') return <Navigate to="/registro" replace />
+  return <Navigate to="/dashboard" replace />
+}
+
+function DashboardGate() {
+  const rol = useAuthStore((s) => s.perfil?.rol)
+  if (rol === 'digitador') return <Navigate to="/registro" replace />
+  return <Dashboard />
+}
 
 export default function App() {
   return (
@@ -33,8 +46,8 @@ export default function App() {
 
           <Route element={<RequireAuth />}>
             <Route element={<AppLayout />}>
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route index element={<HomeRedirect />} />
+              <Route path="/dashboard" element={<DashboardGate />} />
               <Route path="/registro" element={<Registro />} />
               <Route path="/reportes" element={<Reportes />} />
               <Route path="/informacion" element={<Informacion />} />

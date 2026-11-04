@@ -99,6 +99,9 @@ export interface Database {
           valor_cop: number | null
           fecha_registro: string
           es_ejemplo: boolean
+          estado: string
+          lote_id: string | null
+          version: number
           created_at: string
           updated_at: string
         }
@@ -116,6 +119,9 @@ export interface Database {
           valor_cop?: number | null
           fecha_registro?: string
           es_ejemplo?: boolean
+          estado?: string
+          lote_id?: string | null
+          version?: number
           created_at?: string
           updated_at?: string
         }
@@ -133,8 +139,143 @@ export interface Database {
           valor_cop?: number | null
           fecha_registro?: string
           es_ejemplo?: boolean
+          estado?: string
+          lote_id?: string | null
+          version?: number
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      lotes: {
+        Row: {
+          id: string
+          empresa_id: string
+          creado_por: string
+          titulo: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id: string
+          creado_por: string
+          titulo?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          creado_por?: string
+          titulo?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lote_mensajes: {
+        Row: {
+          id: string
+          lote_id: string
+          autor_id: string
+          mensaje: string
+          canal: string
+          solo_lectura_roles: string[]
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          lote_id: string
+          autor_id: string
+          mensaje: string
+          canal: string
+          solo_lectura_roles?: string[]
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          lote_id?: string
+          autor_id?: string
+          mensaje?: string
+          canal?: string
+          solo_lectura_roles?: string[]
+          created_at?: string
+        }
+        Relationships: []
+      }
+      factor_historial: {
+        Row: {
+          id: string
+          factor_id: string
+          lote_id: string | null
+          usuario_id: string | null
+          accion: string
+          estado_anterior: string | null
+          estado_nuevo: string | null
+          diff: Json | null
+          comentario: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          factor_id: string
+          lote_id?: string | null
+          usuario_id?: string | null
+          accion: string
+          estado_anterior?: string | null
+          estado_nuevo?: string | null
+          diff?: Json | null
+          comentario?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          factor_id?: string
+          lote_id?: string | null
+          usuario_id?: string | null
+          accion?: string
+          estado_anterior?: string | null
+          estado_nuevo?: string | null
+          diff?: Json | null
+          comentario?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      notificaciones: {
+        Row: {
+          id: string
+          usuario_id: string
+          empresa_id: string | null
+          tipo: string
+          titulo: string
+          cuerpo: string | null
+          enlace: string | null
+          leida: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          usuario_id: string
+          empresa_id?: string | null
+          tipo: string
+          titulo: string
+          cuerpo?: string | null
+          enlace?: string | null
+          leida?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          usuario_id?: string
+          empresa_id?: string | null
+          tipo?: string
+          titulo?: string
+          cuerpo?: string | null
+          enlace?: string | null
+          leida?: boolean
+          created_at?: string
         }
         Relationships: []
       }

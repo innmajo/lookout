@@ -22,6 +22,23 @@ export type Plazo = (typeof PLAZOS)[number]
 export const NIVELES_PRIORIDAD = ['CRÍTICO', 'ATENCIÓN', 'MONITOREAR'] as const
 export type NivelPrioridad = (typeof NIVELES_PRIORIDAD)[number]
 
+export const ESTADOS_FACTOR = [
+  'borrador',
+  'en_revision_supervisor',
+  'en_auditoria',
+  'en_aprobacion',
+  'aprobado',
+] as const
+export type EstadoFactor = (typeof ESTADOS_FACTOR)[number]
+
+export const ESTADO_FACTOR_ETIQUETA: Record<EstadoFactor, string> = {
+  borrador: 'Borrador',
+  en_revision_supervisor: 'En revisión (supervisor)',
+  en_auditoria: 'En auditoría',
+  en_aprobacion: 'En aprobación',
+  aprobado: 'Aprobado',
+}
+
 export interface FactorPestel {
   id: string
   categoria: Categoria
@@ -33,6 +50,9 @@ export interface FactorPestel {
   valorCOP?: number
   fechaRegistro: string
   esEjemplo?: boolean
+  estado: EstadoFactor
+  loteId?: string | null
+  version: number
 }
 
 export interface Prioridad {

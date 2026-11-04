@@ -1,8 +1,10 @@
-import { Pencil, Search, Trash2 } from 'lucide-react'
+import { Pencil, Search, Send, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { FactorForm } from '@/components/forms/FactorForm'
 import { SemaforoBadge } from '@/components/SemaforoBadge'
+import { LotePanel } from '@/components/workflow/LotePanel'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,11 +35,13 @@ import { calcularPrioridad } from '@/lib/prioridad'
 import { SECTORES } from '@/lib/sectores'
 import { formatearFecha } from '@/lib/utils'
 import { mensajeErrorSupabase } from '@/lib/factoresApi'
-import { puedeOperarFactores } from '@/lib/roles'
+import { puedeOperarFactores, type Rol } from '@/lib/roles'
+import { enviarLoteAprobacion } from '@/lib/workflowApi'
 import { useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
 import {
   CATEGORIAS,
+  ESTADO_FACTOR_ETIQUETA,
   IMPACTOS,
   PLAZOS,
   TIPOS,
@@ -61,6 +65,8 @@ export function Registro() {
   const agregarFactor = usePestelStore((s) => s.agregarFactor)
   const actualizarFactor = usePestelStore((s) => s.actualizarFactor)
   const eliminarFactor = usePestelStore((s) => s.eliminarFactor)
+  const cargarDesdeNube = usePestelStore((s) => s.cargarDesdeNube)
+  const [searchParams] = useSearchParams()
 
   const trmUsd = usePestelStore((s) => s.trmUsd)
   const [busqueda, setBusqueda] = useState('')
@@ -71,6 +77,24 @@ export function Registro() {
   const [orden, setOrden] = useState<Orden>('fecha-desc')
   const [editando, setEditando] = useState<FactorPestel | null>(null)
   const [eliminando, setEliminando] = useState<FactorPestel | null>(null)
+  const [enviandoLote, setEnviandoLote] = useState(false)
+
+  const borradores = useMemo(
+    () => factores.filter((f) => (f.estado ?? 'borrador') === 'borrador'),
+    [factores],
+  )
+  const loteIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const f of factores) {
+      if (f.loteId) ids.add(f.loteId)
+    }
+    const preferido = searchParams.get('lote')
+    const lista = [...ids]
+    if (preferido && ids.has(preferido)) {
+      return [preferido, ...lista.filter((id) => id !== preferido)]
+    }
+    return lista
+  }, [factores, searchParams])
 
   const filtrados = useMemo(() => {
     const texto = busqueda.trim().toLowerCase()
@@ -113,6 +137,10 @@ export function Registro() {
 
   async function handleEditar(values: FactorFormValues) {
     if (!editando || !userId || !empresaId || !sectorEmpresa) return
+    if (editando.estado !== 'borrador') {
+      toast.error('Solo se pueden editar factores en borrador')
+      return
+    }
     try {
       await actualizarFactor(userId, empresaId, editando.id, {
         ...values,
@@ -123,6 +151,29 @@ export function Registro() {
     } catch (error) {
       toast.error(mensajeErrorSupabase(error))
     }
+  }
+
+  async function handleEnviarLote() {
+    if (!userId || !empresaId) return
+    if (borradores.length === 0) {
+      toast.error('No hay factores en borrador para enviar')
+      return
+    }
+    setEnviandoLote(true)
+    try {
+      const { cantidad } = await enviarLoteAprobacion({ userId, empresaId })
+      await cargarDesdeNube(empresaId, true)
+      toast.success(`Lote enviado: ${cantidad} factor(es) a revisión del supervisor`)
+    } catch (error) {
+      toast.error(mensajeErrorSupabase(error))
+    } finally {
+      setEnviandoLote(false)
+    }
+  }
+
+  async function refrescar() {
+    if (!empresaId) return
+    await cargarDesdeNube(empresaId, true).catch(() => undefined)
   }
 
   if (rol === 'admin_empresa' || rol === 'sistema') {
@@ -141,11 +192,27 @@ export function Registro() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <header>
-        <h1 className="text-2xl text-foreground">Registro</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Documente amenazas y oportunidades del entorno. El valor en pesos es opcional.
-        </p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl text-foreground">Registro</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {puedeEscribir
+              ? 'Capture factores en borrador y envíe el lote a aprobación cuando estén listos.'
+              : 'Revise factores, apruebe o rechace según su rol. Solo lectura del contenido.'}
+          </p>
+        </div>
+        {puedeEscribir ? (
+          <Button
+            type="button"
+            disabled={enviandoLote || borradores.length === 0}
+            onClick={() => void handleEnviarLote()}
+          >
+            <Send />
+            {enviandoLote
+              ? 'Enviando…'
+              : `Envío para aprobación (${borradores.length})`}
+          </Button>
+        ) : null}
       </header>
 
       {puedeEscribir ? (
@@ -154,7 +221,7 @@ export function Registro() {
             <CardTitle>Nuevo factor</CardTitle>
             <CardDescription>
               El sector es el de su empresa ({sectorEmpresa ? SECTORES[sectorEmpresa].nombre : '—'}).
-              Si puede, indique lo que se perdería o se ganaría.
+              Los factores en revisión quedan bloqueados; puede seguir creando borradores.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -163,9 +230,25 @@ export function Registro() {
         </Card>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Su rol solo permite consultar factores. La digitación corresponde al digitador.
+          Su rol consulta factores y decide (aprobar/rechazar) en los lotes pendientes.
         </p>
       )}
+
+      {loteIds.length > 0 && userId && empresaId && rol ? (
+        <div className="space-y-4">
+          {loteIds.map((loteId) => (
+            <LotePanel
+              key={loteId}
+              loteId={loteId}
+              factores={factores}
+              userId={userId}
+              empresaId={empresaId}
+              rol={rol as Rol}
+              onChanged={() => void refrescar()}
+            />
+          ))}
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -254,6 +337,7 @@ export function Registro() {
                   <TableHead>Impacto</TableHead>
                   <TableHead>Plazo</TableHead>
                   <TableHead>Prioridad</TableHead>
+                  <TableHead>Estado</TableHead>
                   <TableHead>Fecha</TableHead>
                   {puedeEscribir ? <TableHead className="text-right">Acciones</TableHead> : null}
                 </TableRow>
@@ -301,6 +385,11 @@ export function Registro() {
                       <TableCell>
                         <SemaforoBadge factor={factor} mostrarPuntaje />
                       </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {ESTADO_FACTOR_ETIQUETA[factor.estado ?? 'borrador']}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{formatearFecha(factor.fechaRegistro)}</TableCell>
                       {puedeEscribir ? (
                         <TableCell className="text-right">
@@ -309,6 +398,7 @@ export function Registro() {
                               type="button"
                               size="icon"
                               variant="ghost"
+                              disabled={(factor.estado ?? 'borrador') !== 'borrador'}
                               aria-label={`Editar factor ${factor.categoria}`}
                               onClick={() => setEditando(factor)}
                             >
@@ -318,6 +408,7 @@ export function Registro() {
                               type="button"
                               size="icon"
                               variant="ghost"
+                              disabled={(factor.estado ?? 'borrador') !== 'borrador'}
                               aria-label={`Eliminar factor ${factor.categoria}`}
                               onClick={() => setEliminando(factor)}
                             >

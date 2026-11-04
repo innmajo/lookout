@@ -139,7 +139,8 @@ export function Login() {
           navigate('/cambiar-password', { replace: true })
         } else {
           toast.success('Sesión iniciada')
-          navigate('/dashboard', { replace: true })
+          const rol = useAuthStore.getState().perfil?.rol
+          navigate(rol === 'digitador' ? '/registro' : '/dashboard', { replace: true })
         }
       } else {
         const { needsEmailConfirmation } = await signUp(email.trim(), password, empresa)

@@ -21,7 +21,7 @@ interface PestelState {
   loading: boolean
   error: string | null
   hydratedEmpresaId: string | null
-  cargarDesdeNube: (empresaId: string) => Promise<void>
+  cargarDesdeNube: (empresaId: string, forzar?: boolean) => Promise<void>
   limpiarLocal: () => void
   setTrmUsd: (trm: number) => Promise<void>
   agregarFactor: (
@@ -56,8 +56,8 @@ export const usePestelStore = create<PestelState>((set, get) => ({
       hydratedEmpresaId: null,
     }),
 
-  cargarDesdeNube: async (empresaId) => {
-    if (get().hydratedEmpresaId === empresaId && !get().loading) return
+  cargarDesdeNube: async (empresaId, forzar = false) => {
+    if (!forzar && get().hydratedEmpresaId === empresaId && !get().loading) return
     set({ loading: true, error: null })
     try {
       const [factores, trm] = await Promise.all([
@@ -101,7 +101,26 @@ export const usePestelStore = create<PestelState>((set, get) => ({
   },
 
   actualizarFactor: async (userId, empresaId, id, values) => {
+    const { registrarDiffEdicion } = await import('@/lib/workflowApi')
+    const previo = get().factores.find((f) => f.id === id)
     const actualizado = await updateFactor(userId, empresaId, id, values)
+    if (previo) {
+      await registrarDiffEdicion({
+        userId,
+        factorId: id,
+        loteId: previo.loteId,
+        antes: {
+          categoria: previo.categoria,
+          descripcion: previo.descripcion,
+          tipo: previo.tipo,
+          impacto: previo.impacto,
+          plazo: previo.plazo,
+          sector: previo.sector,
+          valorCOP: previo.valorCOP,
+        },
+        despues: values,
+      }).catch(() => undefined)
+    }
     set((state) => ({
       factores: state.factores.map((factor) => (factor.id === id ? actualizado : factor)),
     }))

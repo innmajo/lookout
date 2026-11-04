@@ -40,13 +40,29 @@ export function puedeGestionarUsuarios(rol: Rol | null | undefined): boolean {
   return rol === 'admin_empresa' || rol === 'sistema'
 }
 
-/** Por ahora solo el digitador escribe factores (flujo de aprobación viene después). */
+/** Solo el digitador crea/edita borradores. */
 export function puedeOperarFactores(rol: Rol | null | undefined): boolean {
   return rol === 'digitador'
 }
 
 export function puedeVerFactores(rol: Rol | null | undefined): boolean {
   return esRolOperativo(rol) || rol === 'admin_empresa'
+}
+
+export function puedeVerDashboard(rol: Rol | null | undefined): boolean {
+  return rol !== 'digitador'
+}
+
+export function puedeRevisarComoSupervisor(rol: Rol | null | undefined): boolean {
+  return rol === 'supervisor'
+}
+
+export function puedeRevisarComoAuditor(rol: Rol | null | undefined): boolean {
+  return rol === 'auditor'
+}
+
+export function puedeRevisarComoAprobador(rol: Rol | null | undefined): boolean {
+  return rol === 'aprobador'
 }
 
 export function puedeVerConfiguracionEmpresa(rol: Rol | null | undefined): boolean {

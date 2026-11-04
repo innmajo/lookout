@@ -1,5 +1,6 @@
 import { esSectorId, type SectorId } from '@/lib/sectores'
 import { requireSupabase } from '@/lib/supabase'
+import { enrichmentEstado } from '@/lib/workflowApi'
 import type { FactorInsert, FactorRow } from '@/types/database'
 import type { FactorFormValues, FactorPestel } from '@/types/pestel'
 import { CATEGORIAS, IMPACTOS, PLAZOS, TIPOS } from '@/types/pestel'
@@ -41,6 +42,7 @@ export function rowToFactor(row: FactorRow): FactorPestel {
         : undefined,
     fechaRegistro: row.fecha_registro,
     esEjemplo: row.es_ejemplo,
+    ...enrichmentEstado(row),
   }
 }
 
@@ -62,6 +64,8 @@ function valuesToInsert(
     sector: values.sector,
     valor_cop: values.valorCOP ?? null,
     es_ejemplo: false,
+    estado: 'borrador',
+    lote_id: null,
     ...extras,
   }
 }
@@ -98,14 +102,23 @@ export async function updateFactor(
   id: string,
   values: FactorFormValues,
 ): Promise<FactorPestel> {
+  // No tocar estado/lote_id: el flujo de aprobación los gestiona aparte.
   const { data, error } = await requireSupabase()
     .from('factores')
     .update({
-      ...valuesToInsert(userId, empresaId, values),
+      categoria: values.categoria,
+      descripcion: values.descripcion.trim(),
+      tipo: values.tipo,
+      impacto: values.impacto,
+      plazo: values.plazo,
+      sector: values.sector,
+      valor_cop: values.valorCOP ?? null,
       es_ejemplo: false,
+      creado_por: userId,
     })
     .eq('id', id)
     .eq('empresa_id', empresaId)
+    .eq('estado', 'borrador')
     .select('*')
     .single()
 

@@ -16,6 +16,7 @@ import { ThemeBubbles, ThemeContentFigures } from '@/components/layout/ThemeBubb
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { mensajeErrorSupabase } from '@/lib/factoresApi'
+import { NotificacionesBell } from '@/components/NotificacionesBell'
 import { puedeOperarFactores, ROL_ETIQUETA, type Rol } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/useAuthStore'
@@ -35,6 +36,12 @@ function navPorRol(rol: Rol | null | undefined) {
       { to: '/usuarios', label: 'Usuarios', icon: Users },
       { to: '/configuracion', label: 'Configuración', icon: Settings },
       { to: '/informacion', label: 'Información', icon: CircleHelp },
+    ]
+  }
+  if (rol === 'digitador') {
+    return [
+      { to: '/registro', label: 'Registro', icon: ClipboardList },
+      { to: '/configuracion', label: 'Configuración', icon: Settings },
     ]
   }
   const items = [
@@ -169,7 +176,10 @@ export function AppLayout() {
           <NavItems />
         </div>
         <div className="space-y-3">
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <NotificacionesBell />
+          </div>
           <CuentaSidebar />
         </div>
       </aside>
@@ -179,6 +189,7 @@ export function AppLayout() {
           <Logo />
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <NotificacionesBell />
             <button
               type="button"
               className="rounded-lg p-2 text-foreground hover:bg-foreground/10"
