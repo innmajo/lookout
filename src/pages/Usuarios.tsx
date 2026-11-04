@@ -105,7 +105,7 @@ export function Usuarios() {
         <h1 className="text-2xl text-foreground">Usuarios</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {empresa.nombre} · cree usuarios de su empresa y asígneles un solo rol. La contraseña es
-          temporal: el usuario deberá cambiarla después (próximamente).
+          temporal: al entrar deberán definir una nueva antes de usar Lookout.
         </p>
       </header>
 

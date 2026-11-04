@@ -9,7 +9,9 @@ interface ThemeState {
   sector: SectorId
   sectorFijo: boolean
   setTema: (tema: Tema) => void
-  /** Solo para hidratar desde la empresa. No usar en UI de configuración. */
+  /** Cambia la paleta solo si el sector no está fijado por la empresa (p. ej. admin sistema). */
+  setSector: (sector: SectorId) => void
+  /** Solo para hidratar desde la empresa. */
   setSectorFijo: (sector: SectorId) => void
 }
 
@@ -39,6 +41,11 @@ export const useThemeStore = create<ThemeState>()(
         setTema: (tema) => {
           aplicarApariencia(tema, get().sector)
           set({ tema })
+        },
+        setSector: (sector) => {
+          if (get().sectorFijo) return
+          aplicarApariencia(get().tema, sector)
+          set({ sector })
         },
         setSectorFijo: (sector) => {
           aplicarApariencia(get().tema, sector)

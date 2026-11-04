@@ -2,6 +2,9 @@ import { requireSupabase } from '@/lib/supabase'
 import type { RolOperativo } from '@/lib/roles'
 import type { PerfilRow } from '@/types/database'
 
+export const MSG_USUARIO_DESACTIVADO =
+  'Usuario desactivado. Pídale a su organizador que lo active nuevamente.'
+
 export async function listarUsuariosEmpresa(empresaId: string): Promise<PerfilRow[]> {
   const { data, error } = await requireSupabase()
     .from('perfiles')
@@ -40,6 +43,15 @@ export async function setUsuarioActivo(userId: string, activo: boolean): Promise
   if (error) throw error
 }
 
+export async function marcarPasswordActualizada(userId: string): Promise<void> {
+  const { error } = await requireSupabase()
+    .from('perfiles')
+    .update({ debe_cambiar_password: false })
+    .eq('id', userId)
+
+  if (error) throw error
+}
+
 export async function fetchSesionContexto(userId: string) {
   const client = requireSupabase()
   const { data: perfil, error: perfilError } = await client
@@ -50,7 +62,7 @@ export async function fetchSesionContexto(userId: string) {
 
   if (perfilError) throw perfilError
   if (!perfil) throw new Error('No hay perfil asociado a esta cuenta. Vuelve a registrarte.')
-  if (!perfil.activo) throw new Error('Tu usuario está desactivado. Contacta al administrador.')
+  if (!perfil.activo) throw new Error(MSG_USUARIO_DESACTIVADO)
 
   let empresa = null
   if (perfil.empresa_id) {
@@ -65,7 +77,7 @@ export async function fetchSesionContexto(userId: string) {
       throw new Error('No se encontró la empresa de esta cuenta.')
     }
     if (empresa && !empresa.activa) {
-      throw new Error('La empresa está desactivada.')
+      throw new Error('La empresa está desactivada. Contacte al administrador del sistema.')
     }
   }
 

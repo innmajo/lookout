@@ -89,10 +89,18 @@ Deno.serve(async (req) => {
         nombre,
         apellido,
         cedula,
+        debe_cambiar_password: true,
       },
     })
 
     if (createError) return json({ error: createError.message }, 400)
+
+    if (created.user?.id) {
+      await admin
+        .from('perfiles')
+        .update({ debe_cambiar_password: true })
+        .eq('id', created.user.id)
+    }
 
     return json({
       user: {
@@ -100,6 +108,7 @@ Deno.serve(async (req) => {
         email: created.user?.email,
         rol,
         empresa_id: empresaId,
+        debe_cambiar_password: true,
       },
     })
   } catch (error) {

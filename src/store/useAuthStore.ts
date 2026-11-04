@@ -2,7 +2,11 @@ import type { Session, User } from '@supabase/supabase-js'
 import { create } from 'zustand'
 import { esSectorId } from '@/lib/sectores'
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase'
-import { fetchSesionContexto } from '@/lib/usuariosApi'
+import {
+  fetchSesionContexto,
+  marcarPasswordActualizada,
+  MSG_USUARIO_DESACTIVADO,
+} from '@/lib/usuariosApi'
 import { aplicarApariencia, useThemeStore } from '@/store/useThemeStore'
 import type { DatosEmpresaRegistro, EmpresaRow, PerfilRow } from '@/types/database'
 
@@ -13,7 +17,9 @@ interface AuthState {
   empresa: EmpresaRow | null
   initializing: boolean
   ready: boolean
+  authError: string | null
   setSession: (session: Session | null) => void
+  setAuthError: (mensaje: string | null) => void
   cargarContexto: (userId: string) => Promise<void>
   limpiarContexto: () => void
   signIn: (email: string, password: string) => Promise<void>
@@ -22,14 +28,33 @@ interface AuthState {
     password: string,
     empresa: DatosEmpresaRegistro,
   ) => Promise<{ needsEmailConfirmation: boolean }>
+  cambiarPassword: (nuevaPassword: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
 function aplicarSectorEmpresa(empresa: EmpresaRow | null) {
-  if (!empresa || !esSectorId(empresa.sector)) return
+  if (!empresa || !esSectorId(empresa.sector)) {
+    useThemeStore.setState({ sectorFijo: false })
+    return
+  }
   const tema = useThemeStore.getState().tema
   useThemeStore.getState().setSectorFijo(empresa.sector)
   aplicarApariencia(tema, empresa.sector)
+}
+
+async function cerrarSesionLocal() {
+  try {
+    await requireSupabase().auth.signOut()
+  } catch {
+    // ignore
+  }
+  useAuthStore.setState({
+    session: null,
+    user: null,
+    perfil: null,
+    empresa: null,
+  })
+  useThemeStore.setState({ sectorFijo: false })
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -39,6 +64,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   empresa: null,
   initializing: true,
   ready: false,
+  authError: null,
   setSession: (session) =>
     set({
       session,
@@ -46,17 +72,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       ready: true,
       initializing: false,
     }),
+  setAuthError: (mensaje) => set({ authError: mensaje }),
   limpiarContexto: () => set({ perfil: null, empresa: null }),
   cargarContexto: async (userId) => {
     const ctx = await fetchSesionContexto(userId)
-    set({ perfil: ctx.perfil, empresa: ctx.empresa })
+    set({ perfil: ctx.perfil, empresa: ctx.empresa, authError: null })
     aplicarSectorEmpresa(ctx.empresa)
   },
   signIn: async (email, password) => {
-    const { error } = await requireSupabase().auth.signInWithPassword({ email, password })
+    set({ authError: null })
+    const { data, error } = await requireSupabase().auth.signInWithPassword({ email, password })
     if (error) throw error
+    if (!data.user) throw new Error('No se pudo iniciar sesión')
+
+    try {
+      await get().cargarContexto(data.user.id)
+    } catch (err) {
+      const mensaje =
+        err instanceof Error ? err.message : 'No se pudo validar su cuenta.'
+      await cerrarSesionLocal()
+      set({ authError: mensaje })
+      throw new Error(mensaje)
+    }
   },
   signUp: async (email, password, empresa) => {
+    set({ authError: null })
     const metadata = {
       nombre_empresa: empresa.nombreEmpresa.trim(),
       nit: empresa.nit.trim(),
@@ -85,10 +125,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     return { needsEmailConfirmation: !data.session }
   },
+  cambiarPassword: async (nuevaPassword) => {
+    const userId = get().user?.id
+    if (!userId) throw new Error('No hay sesión activa')
+
+    const { error } = await requireSupabase().auth.updateUser({ password: nuevaPassword })
+    if (error) throw error
+
+    await marcarPasswordActualizada(userId)
+    set((state) => ({
+      perfil: state.perfil
+        ? { ...state.perfil, debe_cambiar_password: false }
+        : state.perfil,
+    }))
+  },
   signOut: async () => {
     const { error } = await requireSupabase().auth.signOut()
     if (error) throw error
-    set({ session: null, user: null, perfil: null, empresa: null })
+    set({ session: null, user: null, perfil: null, empresa: null, authError: null })
     useThemeStore.setState({ sectorFijo: false })
   },
 }))
@@ -120,3 +174,5 @@ export function bootstrapAuth() {
     authListenerBound = false
   }
 }
+
+export { MSG_USUARIO_DESACTIVADO }

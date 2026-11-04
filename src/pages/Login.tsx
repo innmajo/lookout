@@ -64,6 +64,8 @@ export function Login() {
   const navigate = useNavigate()
   const signIn = useAuthStore((s) => s.signIn)
   const signUp = useAuthStore((s) => s.signUp)
+  const authError = useAuthStore((s) => s.authError)
+  const setAuthError = useAuthStore((s) => s.setAuthError)
   const tema = useThemeStore((s) => s.tema)
   const sector = useThemeStore((s) => s.sector)
   const [modo, setModo] = useState<Modo>('entrar')
@@ -79,6 +81,13 @@ export function Login() {
   useEffect(() => {
     aplicarApariencia(tema, sector)
   }, [tema, sector])
+
+  useEffect(() => {
+    if (authError) {
+      toast.error(authError)
+      setAuthError(null)
+    }
+  }, [authError, setAuthError])
 
   function setCampoEmpresa(campo: keyof typeof EMPRESA_VACIA, valor: string) {
     setEmpresa((prev) => ({ ...prev, [campo]: valor }))

@@ -16,11 +16,11 @@ import {
 } from '@/lib/analytics'
 import { CATEGORIA_META } from '@/lib/constants'
 import { copAUsd, exposicionEconomica, formatearCOP, formatearUSD, tieneValor } from '@/lib/dinero'
-import { ROL_ETIQUETA } from '@/lib/roles'
 import { SECTORES } from '@/lib/sectores'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
+import { DashboardSistema } from '@/pages/DashboardSistema'
 
 export function Dashboard() {
   const factores = usePestelStore((s) => s.factores)
@@ -29,23 +29,7 @@ export function Dashboard() {
   const perfil = useAuthStore((s) => s.perfil)
 
   if (perfil?.rol === 'sistema') {
-    return (
-      <div className="mx-auto max-w-3xl space-y-4">
-        <header>
-          <h1 className="text-2xl text-foreground">Administración del sistema</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Métricas globales y parámetros de plataforma llegarán en una siguiente entrega. Usted no
-            participa en el flujo de registros de las empresas.
-          </p>
-        </header>
-        <Card>
-          <CardContent className="p-5 text-sm text-muted-foreground">
-            Rol: {ROL_ETIQUETA.sistema}. Use el SQL/script de seed para crear esta cuenta; no se
-            registra por el formulario público.
-          </CardContent>
-        </Card>
-      </div>
-    )
+    return <DashboardSistema />
   }
 
   const visibles = factores

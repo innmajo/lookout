@@ -51,6 +51,7 @@ export interface Database {
           empresa_id: string | null
           rol: Rol
           activo: boolean
+          debe_cambiar_password: boolean
           nombre: string | null
           apellido: string | null
           cedula: string | null
@@ -62,6 +63,7 @@ export interface Database {
           empresa_id?: string | null
           rol: Rol
           activo?: boolean
+          debe_cambiar_password?: boolean
           nombre?: string | null
           apellido?: string | null
           cedula?: string | null
@@ -73,6 +75,7 @@ export interface Database {
           empresa_id?: string | null
           rol?: Rol
           activo?: boolean
+          debe_cambiar_password?: boolean
           nombre?: string | null
           apellido?: string | null
           cedula?: string | null

@@ -4,8 +4,10 @@ import {
   GuestOnly,
   RequireAdminEmpresa,
   RequireAuth,
+  RequireCambioPassword,
 } from '@/components/auth/AuthGate'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { CambiarPassword } from '@/pages/CambiarPassword'
 import { Configuracion } from '@/pages/Configuracion'
 import { Dashboard } from '@/pages/Dashboard'
 import { Informacion } from '@/pages/Informacion'
@@ -22,6 +24,10 @@ export default function App() {
         <Routes>
           <Route element={<GuestOnly />}>
             <Route path="/login" element={<Login />} />
+          </Route>
+
+          <Route element={<RequireCambioPassword />}>
+            <Route path="/cambiar-password" element={<CambiarPassword />} />
           </Route>
 
           <Route element={<RequireAuth />}>
