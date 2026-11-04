@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { TablaPesos } from '@/components/SectorPicker'
 import { calcularNivelCelda, calcularPrioridad, valorImpacto, valorPlazo } from '@/lib/prioridad'
 import { PESO_MEDIO, pesoCategoria, SECTORES } from '@/lib/sectores'
+import { useAuthStore } from '@/store/useAuthStore'
 import { useThemeStore } from '@/store/useThemeStore'
 import { IMPACTOS, PLAZOS, type FactorPestel } from '@/types/pestel'
 
@@ -49,7 +50,11 @@ const EJEMPLOS = [
 }>
 
 export function Informacion() {
-  const sector = useThemeStore((s) => s.sector)
+  const sectorTema = useThemeStore((s) => s.sector)
+  const empresaSector = useAuthStore((s) => s.empresa?.sector)
+  const rol = useAuthStore((s) => s.perfil?.rol)
+  const sector = empresaSector ?? sectorTema
+  const soloActivo = rol !== 'sistema'
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -169,12 +174,13 @@ export function Informacion() {
         <CardHeader>
           <CardTitle>Pesos PESTEL por sector</CardTitle>
           <CardDescription>
-            Cada fila suma 100%. El sector de la organización pinta el color de Lookout; el sector
-            de cada registro es el que entra en su puntaje.
+            {soloActivo
+              ? 'Su empresa usa estos pesos para el semáforo. El administrador del sistema puede ver todos los sectores.'
+              : 'Cada fila suma 100%. El sector de la organización pinta el color de Lookout; el sector de cada registro es el que entra en su puntaje.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <TablaPesos sectorActivo={sector} />
+          <TablaPesos sectorActivo={sector} soloActivo={soloActivo} />
         </CardContent>
       </Card>
 

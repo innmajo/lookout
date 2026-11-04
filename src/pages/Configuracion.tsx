@@ -1,4 +1,5 @@
-import { Database, Trash2 } from 'lucide-react'
+import { Database, RefreshCw, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { TablaPesos } from '@/components/SectorPicker'
 import {
@@ -21,6 +22,7 @@ import { mensajeErrorSupabase } from '@/lib/factoresApi'
 import { puedeOperarFactores, ROL_ETIQUETA } from '@/lib/roles'
 import { FACTORES_EJEMPLO } from '@/lib/sampleData'
 import { SECTORES } from '@/lib/sectores'
+import { fetchTrmMercado, type TrmMercado } from '@/lib/trmApi'
 import { useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
 
@@ -35,8 +37,84 @@ export function Configuracion() {
   const setTrmUsd = usePestelStore((s) => s.setTrmUsd)
 
   const sector = empresa?.sector
+  const esSistema = perfil?.rol === 'sistema'
   const esAdminEmpresa = perfil?.rol === 'admin_empresa'
   const puedeEjemplos = puedeOperarFactores(perfil?.rol)
+  const puedeEditarTrm = esAdminEmpresa || esSistema
+
+  const [trmBorrador, setTrmBorrador] = useState(String(trmUsd))
+  const [mercado, setMercado] = useState<TrmMercado | null>(null)
+  const [cargandoTrm, setCargandoTrm] = useState(false)
+
+  useEffect(() => {
+    setTrmBorrador(String(trmUsd))
+  }, [trmUsd])
+
+  useEffect(() => {
+    if (!puedeEditarTrm) return
+    let cancelado = false
+    setCargandoTrm(true)
+    void fetchTrmMercado()
+      .then(async (data) => {
+        if (cancelado) return
+        setMercado(data)
+        // Si aún está el respaldo 4000, aplica la tasa real una vez.
+        if (usePestelStore.getState().trmUsd === TRM_POR_DEFECTO) {
+          await setTrmUsd(data.valor)
+          if (!cancelado) setTrmBorrador(String(data.valor))
+        }
+      })
+      .catch(() => {
+        if (!cancelado) setMercado(null)
+      })
+      .finally(() => {
+        if (!cancelado) setCargandoTrm(false)
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [puedeEditarTrm, setTrmUsd])
+
+  async function refrescarTrmMercado() {
+    setCargandoTrm(true)
+    try {
+      const data = await fetchTrmMercado()
+      setMercado(data)
+      toast.success(`Tasa de mercado: ${data.valor.toLocaleString('es-CO')} COP/USD`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo consultar la TRM')
+    } finally {
+      setCargandoTrm(false)
+    }
+  }
+
+  async function aplicarTrmMercado() {
+    if (!mercado) {
+      await refrescarTrmMercado()
+      return
+    }
+    try {
+      await setTrmUsd(mercado.valor)
+      setTrmBorrador(String(mercado.valor))
+      toast.success('TRM actualizada con la tasa de mercado')
+    } catch (error) {
+      toast.error(mensajeErrorSupabase(error))
+    }
+  }
+
+  async function guardarTrmManual() {
+    const n = Number(trmBorrador.replace(',', '.'))
+    if (!Number.isFinite(n) || n <= 0) {
+      toast.error('Ingrese una TRM válida mayor que 0')
+      return
+    }
+    try {
+      await setTrmUsd(n)
+      toast.success('TRM guardada')
+    } catch (error) {
+      toast.error(mensajeErrorSupabase(error))
+    }
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -62,38 +140,100 @@ export function Configuracion() {
             <p className="glass-soft rounded-xl px-4 py-3 text-sm font-medium text-foreground">
               {SECTORES[sector].nombre}
             </p>
-            <TablaPesos sectorActivo={sector} />
+            <TablaPesos sectorActivo={sector} soloActivo={!esSistema} />
           </CardContent>
         </Card>
       ) : null}
 
-      {empresa && (esAdminEmpresa || perfil?.rol === 'sistema') ? (
+      {empresa && puedeEditarTrm ? (
         <Card>
           <CardHeader>
             <CardTitle>Tasa de cambio (TRM)</CardTitle>
             <CardDescription>
-              Pesos colombianos por 1 dólar. Se usa para traducir el valor de cada amenaza u
-              oportunidad.
+              Pesos colombianos por 1 dólar. Se consulta una tasa de mercado y puede ajustarla a
+              mano.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Label htmlFor="trm">COP por USD</Label>
-            <Input
-              id="trm"
-              className="mt-1.5 max-w-xs"
-              inputMode="decimal"
-              value={trmUsd}
-              onChange={(e) => {
-                const n = Number(e.target.value)
-                if (Number.isFinite(n) && n > 0) {
-                  void setTrmUsd(n).catch((error) => toast.error(mensajeErrorSupabase(error)))
-                }
-              }}
-            />
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              Valor de referencia (no es una TRM en vivo). Por defecto{' '}
-              {TRM_POR_DEFECTO.toLocaleString('es-CO')}.
-            </p>
+          <CardContent className="space-y-4">
+            <div className="glass-soft space-y-2 rounded-xl px-4 py-3 text-sm">
+              <p className="text-foreground">
+                {cargandoTrm && !mercado
+                  ? 'Consultando tasa de mercado…'
+                  : mercado
+                    ? (
+                        <>
+                          Tasa de mercado:{' '}
+                          <strong>{mercado.valor.toLocaleString('es-CO')} COP/USD</strong>
+                        </>
+                      )
+                    : 'No se pudo cargar la tasa de mercado.'}
+              </p>
+              {mercado?.actualizadoEn ? (
+                <p className="text-xs text-muted-foreground">
+                  Actualización de la fuente: {mercado.actualizadoEn}
+                </p>
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                Fuente:{' '}
+                <a
+                  href="https://www.exchangerate-api.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline-offset-2 hover:underline"
+                >
+                  Rates By Exchange Rate API
+                </a>
+                . No es la TRM oficial del Banco de la República; es una referencia de mercado.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={cargandoTrm}
+                  onClick={() => void refrescarTrmMercado()}
+                >
+                  <RefreshCw className={cargandoTrm ? 'animate-spin' : undefined} />
+                  Actualizar
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="accent"
+                  disabled={cargandoTrm || !mercado}
+                  onClick={() => void aplicarTrmMercado()}
+                >
+                  Usar tasa de mercado
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="trm">COP por USD (editable)</Label>
+              <div className="mt-1.5 flex max-w-md flex-wrap items-center gap-2">
+                <Input
+                  id="trm"
+                  className="max-w-xs"
+                  inputMode="decimal"
+                  value={trmBorrador}
+                  onChange={(e) => setTrmBorrador(e.target.value)}
+                  onBlur={() => void guardarTrmManual()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      void guardarTrmManual()
+                    }
+                  }}
+                />
+                <Button type="button" size="sm" variant="outline" onClick={() => void guardarTrmManual()}>
+                  Guardar
+                </Button>
+              </div>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Valor guardado en la empresa. Respaldo si falla la API:{' '}
+                {TRM_POR_DEFECTO.toLocaleString('es-CO')}.
+              </p>
+            </div>
           </CardContent>
         </Card>
       ) : null}

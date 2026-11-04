@@ -44,7 +44,18 @@ export function SectorPicker({
   )
 }
 
-export function TablaPesos({ sectorActivo }: { sectorActivo: SectorId }) {
+export function TablaPesos({
+  sectorActivo,
+  soloActivo = false,
+}: {
+  sectorActivo: SectorId
+  /** Si true, solo muestra la fila del sector de la empresa (admin_empresa / operativos). */
+  soloActivo?: boolean
+}) {
+  const filas = soloActivo
+    ? LISTA_SECTORES.filter((s) => s.id === sectorActivo)
+    : LISTA_SECTORES
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[640px] text-sm">
@@ -59,7 +70,7 @@ export function TablaPesos({ sectorActivo }: { sectorActivo: SectorId }) {
           </tr>
         </thead>
         <tbody>
-          {LISTA_SECTORES.map((sector) => {
+          {filas.map((sector) => {
             const activo = sector.id === sectorActivo
             return (
               <tr
@@ -78,8 +89,9 @@ export function TablaPesos({ sectorActivo }: { sectorActivo: SectorId }) {
         </tbody>
       </table>
       <p className="mt-2 text-xs text-muted-foreground">
-        Pesos de {SECTORES[sectorActivo].nombre}. La fila activa pinta el color de la app; cada
-        factor usa los pesos de su propio sector para el semáforo.
+        {soloActivo
+          ? `Pesos PESTEL de ${SECTORES[sectorActivo].nombre} (sector de su empresa).`
+          : `Pesos de ${SECTORES[sectorActivo].nombre}. La fila activa pinta el color de la app; cada factor usa los pesos de su propio sector para el semáforo.`}
       </p>
     </div>
   )
