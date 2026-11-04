@@ -1,10 +1,9 @@
 import { Pencil, Search, Send, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { FactorForm } from '@/components/forms/FactorForm'
 import { SemaforoBadge } from '@/components/SemaforoBadge'
-import { LotePanel } from '@/components/workflow/LotePanel'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +34,7 @@ import { calcularPrioridad } from '@/lib/prioridad'
 import { SECTORES } from '@/lib/sectores'
 import { formatearFecha } from '@/lib/utils'
 import { mensajeErrorSupabase } from '@/lib/factoresApi'
-import { puedeOperarFactores, type Rol } from '@/lib/roles'
+import { puedeOperarFactores } from '@/lib/roles'
 import { enviarLoteAprobacion } from '@/lib/workflowApi'
 import { useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
@@ -45,6 +44,7 @@ import {
   IMPACTOS,
   PLAZOS,
   TIPOS,
+  esEditableDigitador,
   type Categoria,
   type FactorFormValues,
   type FactorPestel,
@@ -66,7 +66,6 @@ export function Registro() {
   const actualizarFactor = usePestelStore((s) => s.actualizarFactor)
   const eliminarFactor = usePestelStore((s) => s.eliminarFactor)
   const cargarDesdeNube = usePestelStore((s) => s.cargarDesdeNube)
-  const [searchParams] = useSearchParams()
 
   const trmUsd = usePestelStore((s) => s.trmUsd)
   const [busqueda, setBusqueda] = useState('')
@@ -79,22 +78,10 @@ export function Registro() {
   const [eliminando, setEliminando] = useState<FactorPestel | null>(null)
   const [enviandoLote, setEnviandoLote] = useState(false)
 
-  const borradores = useMemo(
-    () => factores.filter((f) => (f.estado ?? 'borrador') === 'borrador'),
+  const enviables = useMemo(
+    () => factores.filter((f) => esEditableDigitador(f.estado)),
     [factores],
   )
-  const loteIds = useMemo(() => {
-    const ids = new Set<string>()
-    for (const f of factores) {
-      if (f.loteId) ids.add(f.loteId)
-    }
-    const preferido = searchParams.get('lote')
-    const lista = [...ids]
-    if (preferido && ids.has(preferido)) {
-      return [preferido, ...lista.filter((id) => id !== preferido)]
-    }
-    return lista
-  }, [factores, searchParams])
 
   const filtrados = useMemo(() => {
     const texto = busqueda.trim().toLowerCase()
@@ -137,8 +124,8 @@ export function Registro() {
 
   async function handleEditar(values: FactorFormValues) {
     if (!editando || !userId || !empresaId || !sectorEmpresa) return
-    if (editando.estado !== 'borrador') {
-      toast.error('Solo se pueden editar factores en borrador')
+    if (!esEditableDigitador(editando.estado)) {
+      toast.error('Solo se pueden editar factores en borrador o para corregir')
       return
     }
     try {
@@ -155,25 +142,22 @@ export function Registro() {
 
   async function handleEnviarLote() {
     if (!userId || !empresaId) return
-    if (borradores.length === 0) {
-      toast.error('No hay factores en borrador para enviar')
+    if (enviables.length === 0) {
+      toast.error('No hay factores en borrador o para corregir para enviar')
       return
     }
     setEnviandoLote(true)
     try {
       const { cantidad } = await enviarLoteAprobacion({ userId, empresaId })
       await cargarDesdeNube(empresaId, true)
-      toast.success(`Lote enviado: ${cantidad} factor(es) a revisión del supervisor`)
+      toast.success(
+        `Lote enviado: ${cantidad} factor(es). Sígalo en Lotes.`,
+      )
     } catch (error) {
       toast.error(mensajeErrorSupabase(error))
     } finally {
       setEnviandoLote(false)
     }
-  }
-
-  async function refrescar() {
-    if (!empresaId) return
-    await cargarDesdeNube(empresaId, true).catch(() => undefined)
   }
 
   if (rol === 'admin_empresa' || rol === 'sistema') {
@@ -204,13 +188,13 @@ export function Registro() {
         {puedeEscribir ? (
           <Button
             type="button"
-            disabled={enviandoLote || borradores.length === 0}
+            disabled={enviandoLote || enviables.length === 0}
             onClick={() => void handleEnviarLote()}
           >
             <Send />
             {enviandoLote
               ? 'Enviando…'
-              : `Envío para aprobación (${borradores.length})`}
+              : `Envío para aprobación (${enviables.length})`}
           </Button>
         ) : null}
       </header>
@@ -230,25 +214,13 @@ export function Registro() {
         </Card>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Su rol consulta factores y decide (aprobar/rechazar) en los lotes pendientes.
+          Consulte factores aquí. Para aprobar, rechazar o chatear sobre un envío, vaya a{' '}
+          <Link to="/lotes" className="text-primary underline-offset-2 hover:underline">
+            Lotes
+          </Link>
+          .
         </p>
       )}
-
-      {loteIds.length > 0 && userId && empresaId && rol ? (
-        <div className="space-y-4">
-          {loteIds.map((loteId) => (
-            <LotePanel
-              key={loteId}
-              loteId={loteId}
-              factores={factores}
-              userId={userId}
-              empresaId={empresaId}
-              rol={rol as Rol}
-              onChanged={() => void refrescar()}
-            />
-          ))}
-        </div>
-      ) : null}
 
       <Card>
         <CardHeader>
@@ -398,7 +370,7 @@ export function Registro() {
                               type="button"
                               size="icon"
                               variant="ghost"
-                              disabled={(factor.estado ?? 'borrador') !== 'borrador'}
+                              disabled={!esEditableDigitador(factor.estado)}
                               aria-label={`Editar factor ${factor.categoria}`}
                               onClick={() => setEditando(factor)}
                             >
@@ -408,7 +380,7 @@ export function Registro() {
                               type="button"
                               size="icon"
                               variant="ghost"
-                              disabled={(factor.estado ?? 'borrador') !== 'borrador'}
+                              disabled={!esEditableDigitador(factor.estado)}
                               aria-label={`Eliminar factor ${factor.categoria}`}
                               onClick={() => setEliminando(factor)}
                             >

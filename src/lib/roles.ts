@@ -50,7 +50,7 @@ export function puedeVerFactores(rol: Rol | null | undefined): boolean {
 }
 
 export function puedeVerDashboard(rol: Rol | null | undefined): boolean {
-  return rol !== 'digitador'
+  return rol !== 'digitador' && rol !== 'admin_empresa'
 }
 
 export function puedeRevisarComoSupervisor(rol: Rol | null | undefined): boolean {

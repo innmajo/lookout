@@ -12,6 +12,7 @@ import { Configuracion } from '@/pages/Configuracion'
 import { Dashboard } from '@/pages/Dashboard'
 import { Informacion } from '@/pages/Informacion'
 import { Login } from '@/pages/Login'
+import { Lotes } from '@/pages/Lotes'
 import { Registro } from '@/pages/Registro'
 import { Reportes } from '@/pages/Reportes'
 import { Usuarios } from '@/pages/Usuarios'
@@ -21,12 +22,14 @@ import { useAuthStore } from '@/store/useAuthStore'
 function HomeRedirect() {
   const rol = useAuthStore((s) => s.perfil?.rol)
   if (rol === 'digitador') return <Navigate to="/registro" replace />
+  if (rol === 'admin_empresa') return <Navigate to="/usuarios" replace />
   return <Navigate to="/dashboard" replace />
 }
 
 function DashboardGate() {
   const rol = useAuthStore((s) => s.perfil?.rol)
   if (rol === 'digitador') return <Navigate to="/registro" replace />
+  if (rol === 'admin_empresa') return <Navigate to="/usuarios" replace />
   return <Dashboard />
 }
 
@@ -49,6 +52,7 @@ export default function App() {
               <Route index element={<HomeRedirect />} />
               <Route path="/dashboard" element={<DashboardGate />} />
               <Route path="/registro" element={<Registro />} />
+              <Route path="/lotes" element={<Lotes />} />
               <Route path="/reportes" element={<Reportes />} />
               <Route path="/informacion" element={<Informacion />} />
               <Route path="/configuracion" element={<Configuracion />} />

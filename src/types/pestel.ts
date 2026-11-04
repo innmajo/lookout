@@ -24,6 +24,7 @@ export type NivelPrioridad = (typeof NIVELES_PRIORIDAD)[number]
 
 export const ESTADOS_FACTOR = [
   'borrador',
+  'para_corregir',
   'en_revision_supervisor',
   'en_auditoria',
   'en_aprobacion',
@@ -33,10 +34,16 @@ export type EstadoFactor = (typeof ESTADOS_FACTOR)[number]
 
 export const ESTADO_FACTOR_ETIQUETA: Record<EstadoFactor, string> = {
   borrador: 'Borrador',
-  en_revision_supervisor: 'En revisión (supervisor)',
+  para_corregir: 'Para corregir',
+  en_revision_supervisor: 'En revisión',
   en_auditoria: 'En auditoría',
   en_aprobacion: 'En aprobación',
   aprobado: 'Aprobado',
+}
+
+/** Digitador puede editar/eliminar/reenviar estos estados. */
+export function esEditableDigitador(estado: EstadoFactor | null | undefined): boolean {
+  return estado === 'borrador' || estado === 'para_corregir'
 }
 
 export interface FactorPestel {

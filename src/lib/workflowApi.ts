@@ -118,7 +118,7 @@ async function notificar(params: {
     tipo: params.tipo,
     titulo: params.titulo,
     cuerpo: params.cuerpo ?? null,
-    enlace: params.enlace ?? '/registro',
+    enlace: params.enlace ?? '/lotes',
   }))
   const { error } = await requireSupabase().from('notificaciones').insert(rows)
   if (error) throw error
@@ -147,65 +147,128 @@ async function registrarHistorial(params: {
   if (error) throw error
 }
 
-/** Digitador: envía todos los borradores en un nuevo lote. */
+/**
+ * Digitador: envía pendientes a revisión.
+ * - "Para corregir" con lote_id → vuelven al MISMO lote (chat e historial siguen).
+ * - Borradores nuevos → lote nuevo.
+ */
 export async function enviarLoteAprobacion(params: {
   userId: string
   empresaId: string
 }): Promise<{ loteId: string; cantidad: number }> {
   const client = requireSupabase()
-  const { data: borradores, error: fetchError } = await client
+  const { data: pendientes, error: fetchError } = await client
     .from('factores')
-    .select('id, estado')
+    .select('id, estado, lote_id')
     .eq('empresa_id', params.empresaId)
-    .eq('estado', 'borrador')
+    .in('estado', ['borrador', 'para_corregir'])
 
   if (fetchError) throw fetchError
-  if (!borradores?.length) throw new Error('No hay factores en borrador para enviar')
-
-  const { data: lote, error: loteError } = await client
-    .from('lotes')
-    .insert({
-      empresa_id: params.empresaId,
-      creado_por: params.userId,
-      titulo: `Envío ${new Date().toLocaleString('es-CO')}`,
-    })
-    .select('*')
-    .single()
-
-  if (loteError) throw loteError
-
-  const ids = borradores.map((b) => b.id)
-  const { error: updError } = await client
-    .from('factores')
-    .update({ estado: 'en_revision_supervisor', lote_id: lote.id })
-    .in('id', ids)
-    .eq('empresa_id', params.empresaId)
-    .eq('estado', 'borrador')
-
-  if (updError) throw updError
-
-  for (const id of ids) {
-    await registrarHistorial({
-      factorId: id,
-      loteId: lote.id,
-      usuarioId: params.userId,
-      accion: 'envio_lote',
-      estadoAnterior: 'borrador',
-      estadoNuevo: 'en_revision_supervisor',
-    })
+  if (!pendientes?.length) {
+    throw new Error('No hay factores en borrador o para corregir para enviar')
   }
 
-  const supervisores = await idsPorRol(params.empresaId, ['supervisor'])
-  await notificar({
-    usuarioIds: supervisores,
-    empresaId: params.empresaId,
-    tipo: 'lote_enviado',
-    titulo: 'Nuevo lote para revisión',
-    cuerpo: `El digitador envió ${ids.length} factor(es) a revisión.`,
-    enlace: `/registro?lote=${lote.id}`,
-  })
+  const reenvios = pendientes.filter((f) => f.estado === 'para_corregir' && f.lote_id)
+  const nuevos = pendientes.filter((f) => !(f.estado === 'para_corregir' && f.lote_id))
 
-  return { loteId: lote.id, cantidad: ids.length }
+  const supervisores = await idsPorRol(params.empresaId, ['supervisor'])
+  let lotePrincipal: string | null = null
+  let cantidad = 0
+
+  // Agrupar correcciones por lote original
+  const porLote = new Map<string, typeof reenvios>()
+  for (const f of reenvios) {
+    const lid = f.lote_id as string
+    const lista = porLote.get(lid) ?? []
+    lista.push(f)
+    porLote.set(lid, lista)
+  }
+
+  for (const [loteId, factores] of porLote) {
+    const ids = factores.map((f) => f.id)
+    const { error: updError } = await client
+      .from('factores')
+      .update({ estado: 'en_revision_supervisor' })
+      .in('id', ids)
+      .eq('empresa_id', params.empresaId)
+      .eq('estado', 'para_corregir')
+
+    if (updError) throw updError
+
+    for (const f of factores) {
+      await registrarHistorial({
+        factorId: f.id,
+        loteId,
+        usuarioId: params.userId,
+        accion: 'reenvio_lote',
+        estadoAnterior: 'para_corregir',
+        estadoNuevo: 'en_revision_supervisor',
+      })
+    }
+
+    await notificar({
+      usuarioIds: supervisores,
+      empresaId: params.empresaId,
+      tipo: 'lote_reenviado',
+      titulo: 'Lote reenviado tras corrección',
+      cuerpo: `El digitador reenvió ${ids.length} factor(es) al mismo lote.`,
+      enlace: `/lotes?lote=${loteId}`,
+    })
+
+    lotePrincipal ??= loteId
+    cantidad += ids.length
+  }
+
+  if (nuevos.length) {
+    const { data: lote, error: loteError } = await client
+      .from('lotes')
+      .insert({
+        empresa_id: params.empresaId,
+        creado_por: params.userId,
+        titulo: `Envío ${new Date().toLocaleString('es-CO')}`,
+      })
+      .select('*')
+      .single()
+
+    if (loteError) throw loteError
+
+    const ids = nuevos.map((b) => b.id)
+    const estadoPorId = new Map(nuevos.map((b) => [b.id, b.estado]))
+    const { error: updError } = await client
+      .from('factores')
+      .update({ estado: 'en_revision_supervisor', lote_id: lote.id })
+      .in('id', ids)
+      .eq('empresa_id', params.empresaId)
+      .in('estado', ['borrador', 'para_corregir'])
+
+    if (updError) throw updError
+
+    for (const id of ids) {
+      await registrarHistorial({
+        factorId: id,
+        loteId: lote.id,
+        usuarioId: params.userId,
+        accion: 'envio_lote',
+        estadoAnterior: estadoPorId.get(id) ?? 'borrador',
+        estadoNuevo: 'en_revision_supervisor',
+      })
+    }
+
+    await notificar({
+      usuarioIds: supervisores,
+      empresaId: params.empresaId,
+      tipo: 'lote_enviado',
+      titulo: 'Nuevo lote para revisión',
+      cuerpo: `El digitador envió ${ids.length} factor(es) a revisión.`,
+      enlace: `/lotes?lote=${lote.id}`,
+    })
+
+    lotePrincipal ??= lote.id
+    cantidad += ids.length
+  }
+
+  if (!lotePrincipal) throw new Error('No se pudo asociar el envío a un lote')
+  return { loteId: lotePrincipal, cantidad }
 }
 
 export async function decidirFactor(params: {
@@ -241,7 +304,7 @@ export async function decidirFactor(params: {
       notificarA = ['auditor']
     } else {
       if (!params.comentario?.trim()) throw new Error('El rechazo exige un comentario')
-      estadoNuevo = 'borrador'
+      estadoNuevo = 'para_corregir'
       canal = 'dig_sup'
       notificarA = ['digitador']
     }
@@ -314,7 +377,7 @@ export async function decidirFactor(params: {
       ? `Factor avanzó a ${estadoNuevo}`
       : `Factor devuelto a ${estadoNuevo}`,
     cuerpo: params.comentario?.trim() || undefined,
-    enlace: factor.lote_id ? `/registro?lote=${factor.lote_id}` : '/registro',
+    enlace: factor.lote_id ? `/lotes?lote=${factor.lote_id}` : '/lotes',
   })
 }
 

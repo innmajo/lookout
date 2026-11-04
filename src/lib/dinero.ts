@@ -11,6 +11,20 @@ export function formatearCOP(valor: number): string {
   }).format(valor)
 }
 
+/** Texto con separador de miles (es-CO) para inputs de dinero. */
+export function formatearCOPInput(valor: number | undefined | null): string {
+  if (valor == null || !Number.isFinite(valor)) return ''
+  return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(valor)
+}
+
+/** Parsea COP escrito con puntos/comas de miles; solo enteros. */
+export function parsearCOPInput(texto: string): number | undefined {
+  const limpio = texto.replace(/[^\d]/g, '')
+  if (!limpio) return undefined
+  const n = Number(limpio)
+  return Number.isFinite(n) ? n : undefined
+}
+
 export function formatearUSD(valor: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

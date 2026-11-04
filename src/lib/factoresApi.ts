@@ -118,7 +118,7 @@ export async function updateFactor(
     })
     .eq('id', id)
     .eq('empresa_id', empresaId)
-    .eq('estado', 'borrador')
+    .in('estado', ['borrador', 'para_corregir'])
     .select('*')
     .single()
 

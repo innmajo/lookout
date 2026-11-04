@@ -58,7 +58,9 @@ export const usePestelStore = create<PestelState>((set, get) => ({
 
   cargarDesdeNube: async (empresaId, forzar = false) => {
     if (!forzar && get().hydratedEmpresaId === empresaId && !get().loading) return
-    set({ loading: true, error: null })
+    // Si ya hay datos, refrescar en silencio para no bloquear AuthGate / desmontar la ruta.
+    const silencioso = get().hydratedEmpresaId === empresaId
+    if (!silencioso) set({ loading: true, error: null })
     try {
       const [factores, trm] = await Promise.all([
         fetchFactores(empresaId),

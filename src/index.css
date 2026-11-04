@@ -74,6 +74,12 @@
     @apply m-0 min-h-svh bg-background font-sans text-foreground antialiased;
   }
 
+  /* Edge/IE: ocultar ojo nativo; usamos el toggle propio */
+  input[type='password']::-ms-reveal,
+  input[type='password']::-ms-clear {
+    display: none;
+  }
+
   #root {
     min-height: 100svh;
   }

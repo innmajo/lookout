@@ -3,6 +3,7 @@ import {
   CircleHelp,
   ClipboardList,
   FileText,
+  Layers,
   LogOut,
   Menu,
   Settings,
@@ -32,21 +33,21 @@ function navPorRol(rol: Rol | null | undefined) {
   }
   if (rol === 'admin_empresa') {
     return [
-      { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
       { to: '/usuarios', label: 'Usuarios', icon: Users },
-      { to: '/configuracion', label: 'Configuración', icon: Settings },
       { to: '/informacion', label: 'Información', icon: CircleHelp },
     ]
   }
   if (rol === 'digitador') {
     return [
       { to: '/registro', label: 'Registro', icon: ClipboardList },
+      { to: '/lotes', label: 'Lotes', icon: Layers },
       { to: '/configuracion', label: 'Configuración', icon: Settings },
     ]
   }
   const items = [
     { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
     { to: '/registro', label: 'Registro', icon: ClipboardList },
+    { to: '/lotes', label: 'Lotes', icon: Layers },
     { to: '/reportes', label: 'Reportes', icon: FileText },
     { to: '/informacion', label: 'Información', icon: CircleHelp },
   ]
@@ -104,9 +105,11 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 function CuentaSidebar() {
   const email = useAuthStore((s) => s.user?.email)
-  const rol = useAuthStore((s) => s.perfil?.rol)
+  const perfil = useAuthStore((s) => s.perfil)
   const empresa = useAuthStore((s) => s.empresa)
   const signOut = useAuthStore((s) => s.signOut)
+  const nombreCompleto = [perfil?.nombre, perfil?.apellido].filter(Boolean).join(' ').trim()
+  const rol = perfil?.rol
 
   async function cerrarSesion() {
     try {
@@ -119,7 +122,11 @@ function CuentaSidebar() {
 
   return (
     <div className="space-y-2">
-      {email ? (
+      {nombreCompleto ? (
+        <p className="truncate text-[11px] font-medium text-foreground" title={nombreCompleto}>
+          {nombreCompleto}
+        </p>
+      ) : email ? (
         <p className="truncate text-[11px] text-sidebar-muted" title={email}>
           {email}
         </p>
@@ -170,15 +177,15 @@ export function AppLayout() {
         Saltar al contenido
       </a>
 
-      <aside className="glass hidden h-svh w-64 shrink-0 flex-col rounded-none border-y-0 border-l-0 p-5 lg:sticky lg:top-0 lg:flex">
+      <aside className="glass relative z-40 hidden h-svh w-64 shrink-0 flex-col overflow-visible rounded-none border-y-0 border-l-0 p-5 lg:sticky lg:top-0 lg:flex">
         <Logo />
         <div className="mt-8 flex-1">
           <NavItems />
         </div>
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
+          <div className="relative z-50 flex items-center gap-2">
             <ThemeToggle />
-            <NotificacionesBell />
+            <NotificacionesBell placement="sidebar" />
           </div>
           <CuentaSidebar />
         </div>
@@ -189,7 +196,7 @@ export function AppLayout() {
           <Logo />
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <NotificacionesBell />
+            <NotificacionesBell placement="header" />
             <button
               type="button"
               className="rounded-lg p-2 text-foreground hover:bg-foreground/10"

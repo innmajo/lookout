@@ -25,7 +25,11 @@ export const factorSchema = z.object({
   }),
   valorCOP: z.preprocess((valor) => {
     if (valor === '' || valor === null || valor === undefined) return undefined
-    const n = typeof valor === 'number' ? valor : Number(String(valor).replaceAll(',', '.'))
+    if (typeof valor === 'number') return Number.isFinite(valor) ? valor : valor
+    // Acepta "250.000.000" o "250000000"
+    const limpio = String(valor).replace(/[^\d]/g, '')
+    if (!limpio) return undefined
+    const n = Number(limpio)
     return Number.isFinite(n) ? n : valor
   }, z.number({ invalid_type_error: 'Ingrese un valor numérico' }).nonnegative('El valor no puede ser negativo').optional()),
 })

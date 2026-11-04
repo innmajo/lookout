@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { CATEGORIA_META } from '@/lib/constants'
-import { copAUsd, formatearUSD } from '@/lib/dinero'
+import { copAUsd, formatearCOPInput, formatearUSD, parsearCOPInput } from '@/lib/dinero'
 import { etiquetaPeso } from '@/lib/prioridad'
 import { factorSchema, type FactorSchema } from '@/lib/schema'
 import { SECTORES, esSectorId } from '@/lib/sectores'
@@ -75,19 +75,6 @@ export function FactorForm({
       className="grid gap-5"
       noValidate
     >
-      <div>
-        <Label htmlFor="sector">Sector de la empresa</Label>
-        <p
-          id="sector"
-          className="glass-soft mt-1.5 rounded-xl px-3 py-2.5 text-sm text-foreground"
-        >
-          {SECTORES[sectorEmpresa].nombre}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Fijo al registrar la empresa. Define los pesos PESTEL y el color de la interfaz.
-        </p>
-      </div>
-
       <div>
         <Label htmlFor="categoria">Categoría</Label>
         <Controller
@@ -186,13 +173,28 @@ export function FactorForm({
         <Label htmlFor="valorCOP">
           {tipo === 'Oportunidad' ? 'Valor que podría ganar (COP)' : 'Valor que podría perder (COP)'}
         </Label>
-        <Input
-          id="valorCOP"
-          className="mt-1.5"
-          inputMode="decimal"
-          placeholder="Ej: 250000000"
-          aria-invalid={!!form.formState.errors.valorCOP}
-          {...form.register('valorCOP')}
+        <Controller
+          control={form.control}
+          name="valorCOP"
+          render={({ field }) => (
+            <Input
+              id="valorCOP"
+              className="mt-1.5"
+              inputMode="numeric"
+              placeholder="Ej: 250.000.000"
+              aria-invalid={!!form.formState.errors.valorCOP}
+              value={formatearCOPInput(
+                typeof field.value === 'number' ? field.value : parsearCOPInput(String(field.value ?? '')),
+              )}
+              onChange={(e) => {
+                const n = parsearCOPInput(e.target.value)
+                field.onChange(n)
+              }}
+              onBlur={field.onBlur}
+              name={field.name}
+              ref={field.ref}
+            />
+          )}
         />
         <p className="mt-1.5 text-xs text-muted-foreground">
           Opcional. Se muestra también en dólares con la TRM de Configuración
