@@ -26,6 +26,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
           </Route>
 
+          {/* Pantalla exclusiva: no usa AppLayout ni el resto de la app */}
           <Route element={<RequireCambioPassword />}>
             <Route path="/cambiar-password" element={<CambiarPassword />} />
           </Route>
@@ -44,7 +45,7 @@ export default function App() {
             </Route>
           </Route>
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <Toaster position="top-right" richColors />
       </AuthBootstrap>

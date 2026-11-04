@@ -22,7 +22,10 @@ interface AuthState {
   setAuthError: (mensaje: string | null) => void
   cargarContexto: (userId: string) => Promise<void>
   limpiarContexto: () => void
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (
+    email: string,
+    password: string,
+  ) => Promise<{ debeCambiarPassword: boolean }>
   signUp: (
     email: string,
     password: string,
@@ -94,6 +97,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ authError: mensaje })
       throw new Error(mensaje)
     }
+
+    const debeCambiarPassword = get().perfil?.debe_cambiar_password === true
+    return { debeCambiarPassword }
   },
   signUp: async (email, password, empresa) => {
     set({ authError: null })
@@ -129,7 +135,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const userId = get().user?.id
     if (!userId) throw new Error('No hay sesión activa')
 
-    const { error } = await requireSupabase().auth.updateUser({ password: nuevaPassword })
+    const { error } = await requireSupabase().auth.updateUser({
+      password: nuevaPassword,
+      data: { debe_cambiar_password: false },
+    })
     if (error) throw error
 
     await marcarPasswordActualizada(userId)

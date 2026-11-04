@@ -46,6 +46,7 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
   const userId = useAuthStore((s) => s.user?.id ?? null)
   const empresaId = useAuthStore((s) => s.empresa?.id ?? null)
   const rol = useAuthStore((s) => s.perfil?.rol)
+  const debeCambiarPassword = useAuthStore((s) => s.perfil?.debe_cambiar_password === true)
   const cargarContexto = useAuthStore((s) => s.cargarContexto)
   const limpiarContexto = useAuthStore((s) => s.limpiarContexto)
   const setAuthError = useAuthStore((s) => s.setAuthError)
@@ -84,6 +85,8 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
   }, [userId, cargarContexto, limpiarContexto, limpiarLocal, setAuthError])
 
   useEffect(() => {
+    // No sincronizar datos de negocio hasta cambiar la contraseña temporal.
+    if (debeCambiarPassword) return
     if (!empresaId) {
       if (rol === 'sistema') {
         limpiarLocal()
@@ -91,7 +94,7 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
       return
     }
     void cargarDesdeNube(empresaId).catch(() => undefined)
-  }, [empresaId, rol, cargarDesdeNube, limpiarLocal])
+  }, [empresaId, rol, debeCambiarPassword, cargarDesdeNube, limpiarLocal])
 
   return children
 }

@@ -110,9 +110,14 @@ export function Login() {
     setEnviando(true)
     try {
       if (modo === 'entrar') {
-        await signIn(email.trim(), password)
-        toast.success('Sesión iniciada')
-        navigate('/dashboard', { replace: true })
+        const { debeCambiarPassword } = await signIn(email.trim(), password)
+        if (debeCambiarPassword) {
+          toast.message('Debe definir una nueva contraseña para continuar')
+          navigate('/cambiar-password', { replace: true })
+        } else {
+          toast.success('Sesión iniciada')
+          navigate('/dashboard', { replace: true })
+        }
       } else {
         const { needsEmailConfirmation } = await signUp(email.trim(), password, empresa)
         if (needsEmailConfirmation) {

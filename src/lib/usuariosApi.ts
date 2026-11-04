@@ -54,26 +54,49 @@ export async function marcarPasswordActualizada(userId: string): Promise<void> {
 
 export async function fetchSesionContexto(userId: string) {
   const client = requireSupabase()
-  const { data: perfil, error: perfilError } = await client
-    .from('perfiles')
-    .select('*')
-    .eq('id', userId)
-    .maybeSingle()
+  const [{ data: perfil, error: perfilError }, { data: authData }] = await Promise.all([
+    client
+      .from('perfiles')
+      .select(
+        'id, empresa_id, rol, activo, debe_cambiar_password, nombre, apellido, cedula, created_at, updated_at',
+      )
+      .eq('id', userId)
+      .maybeSingle(),
+    client.auth.getUser(),
+  ])
 
   if (perfilError) throw perfilError
   if (!perfil) throw new Error('No hay perfil asociado a esta cuenta. Vuelve a registrarte.')
   if (!perfil.activo) throw new Error(MSG_USUARIO_DESACTIVADO)
 
+  // Metadata del alta (contraseña temporal) por si el flag en perfiles quedó en false.
+  const metaDebe =
+    authData.user?.user_metadata?.debe_cambiar_password === true ||
+    authData.user?.user_metadata?.debe_cambiar_password === 'true'
+
+  let perfilFinal = perfil
+  if (metaDebe && perfil.debe_cambiar_password !== true) {
+    const { data: updated } = await client
+      .from('perfiles')
+      .update({ debe_cambiar_password: true })
+      .eq('id', userId)
+      .select(
+        'id, empresa_id, rol, activo, debe_cambiar_password, nombre, apellido, cedula, created_at, updated_at',
+      )
+      .maybeSingle()
+    perfilFinal = updated ?? { ...perfil, debe_cambiar_password: true }
+  }
+
   let empresa = null
-  if (perfil.empresa_id) {
+  if (perfilFinal.empresa_id) {
     const { data, error } = await client
       .from('empresas')
       .select('*')
-      .eq('id', perfil.empresa_id)
+      .eq('id', perfilFinal.empresa_id)
       .maybeSingle()
     if (error) throw error
     empresa = data
-    if (!empresa && perfil.rol !== 'sistema') {
+    if (!empresa && perfilFinal.rol !== 'sistema') {
       throw new Error('No se encontró la empresa de esta cuenta.')
     }
     if (empresa && !empresa.activa) {
@@ -81,5 +104,5 @@ export async function fetchSesionContexto(userId: string) {
     }
   }
 
-  return { perfil, empresa }
+  return { perfil: perfilFinal, empresa }
 }
