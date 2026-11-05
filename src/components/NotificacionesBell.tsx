@@ -46,15 +46,23 @@ export function NotificacionesBell({
     const el = btnRef.current
     if (!el) return
     const r = el.getBoundingClientRect()
-    const panelW = Math.min(320, window.innerWidth - 16)
+    const margin = 20
+    const panelW = Math.min(320, window.innerWidth - margin * 2)
     if (placement === 'sidebar') {
       let left = r.right + 8
-      if (left + panelW > window.innerWidth - 8) left = Math.max(8, r.left - panelW - 8)
-      const top = Math.max(8, Math.min(r.bottom - 8, window.innerHeight - 320))
+      if (left + panelW > window.innerWidth - margin) {
+        left = Math.max(margin, r.left - panelW - 8)
+      }
+      // Altura real del panel (o estimación) para dejar aire abajo y no verse cortado
+      const panelH = panelRef.current?.offsetHeight || Math.min(360, window.innerHeight - margin * 2)
+      let top = r.top - panelH + r.height
+      // Sube el panel si se sale por abajo; no lo pegues al borde inferior
+      top = Math.min(top, window.innerHeight - panelH - margin)
+      top = Math.max(margin, top)
       setCoords({ top, left })
     } else {
       let left = r.right - panelW
-      left = Math.max(8, Math.min(left, window.innerWidth - panelW - 8))
+      left = Math.max(margin, Math.min(left, window.innerWidth - panelW - margin))
       setCoords({ top: r.bottom + 8, left })
     }
   }, [placement])
@@ -65,13 +73,16 @@ export function NotificacionesBell({
       return
     }
     medir()
+    // Re-medir tras pintar el panel (altura real)
+    const id = window.requestAnimationFrame(() => medir())
     window.addEventListener('resize', medir)
     window.addEventListener('scroll', medir, true)
     return () => {
+      window.cancelAnimationFrame(id)
       window.removeEventListener('resize', medir)
       window.removeEventListener('scroll', medir, true)
     }
-  }, [abierto, medir])
+  }, [abierto, items.length, medir])
 
   useEffect(() => {
     if (!abierto) return
@@ -140,10 +151,14 @@ export function NotificacionesBell({
               ref={panelRef}
               role="dialog"
               aria-label="Avisos"
-              className="fixed z-[80] w-80 max-w-[calc(100vw-1rem)] rounded-xl border border-border bg-surface p-2 shadow-lg"
-              style={{ top: coords.top, left: coords.left }}
+              className="fixed z-[80] flex w-80 max-w-[calc(100vw-1rem)] flex-col rounded-xl border border-border bg-surface p-2 shadow-lg"
+              style={{
+                top: coords.top,
+                left: coords.left,
+                maxHeight: 'calc(100vh - 2.5rem)',
+              }}
             >
-              <div className="mb-2 flex items-center justify-between px-2">
+              <div className="mb-2 flex shrink-0 items-center justify-between px-2">
                 <p className="text-xs font-medium text-foreground">Avisos</p>
                 {noLeidas > 0 ? (
                   <button
@@ -155,7 +170,7 @@ export function NotificacionesBell({
                   </button>
                 ) : null}
               </div>
-              <ul className="max-h-72 space-y-1 overflow-y-auto">
+              <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto">
                 {items.length === 0 ? (
                   <li className="px-2 py-4 text-center text-xs text-muted-foreground">
                     Sin notificaciones
