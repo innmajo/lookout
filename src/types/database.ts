@@ -147,6 +147,39 @@ export interface Database {
         }
         Relationships: []
       }
+      informes: {
+        Row: {
+          id: string
+          empresa_id: string
+          version: number
+          texto: string
+          factores: Json
+          metadatos: Json
+          creado_por: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id: string
+          version: number
+          texto: string
+          factores: Json
+          metadatos: Json
+          creado_por: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          version?: number
+          texto?: string
+          factores?: Json
+          metadatos?: Json
+          creado_por?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       lotes: {
         Row: {
           id: string

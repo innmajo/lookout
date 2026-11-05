@@ -12,4 +12,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/api/n8n-informe': {
+        target: 'https://n8n.jelabs.net',
+        changeOrigin: true,
+        rewrite: () => '/webhook/lookout-informe',
+      },
+    },
+  },
 })

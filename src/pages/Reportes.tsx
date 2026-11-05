@@ -1,5 +1,5 @@
-import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { Download, FileSpreadsheet, FileText, Loader2, Sparkles } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { BarrasAgrupadas } from '@/components/charts/BarrasAgrupadas'
 import { RadarEntornos } from '@/components/charts/RadarEntornos'
@@ -21,20 +21,131 @@ import { copAUsd, exposicionEconomica, formatearCOP, formatearUSD, tieneValor } 
 import { exportarCsv } from '@/lib/exportCsv'
 import { exportarExcel } from '@/lib/exportExcel'
 import { exportarPdf } from '@/lib/exportPdf'
+import { descargarInformePdf } from '@/lib/informePdf'
+import { informeN8nConfigurado, solicitarInformeN8n } from '@/lib/informeN8n'
+import {
+  armarMetadatos,
+  guardarInforme,
+  listarInformes,
+  type InformeVersion,
+} from '@/lib/informesApi'
+import { mensajeErrorSupabase } from '@/lib/factoresApi'
 import { SECTORES } from '@/lib/sectores'
-import { fechaLarga } from '@/lib/utils'
+import { fechaLarga, formatearFecha } from '@/lib/utils'
+import { useAuthStore } from '@/store/useAuthStore'
 import { usePestelStore } from '@/store/usePestelStore'
 import { CATEGORIAS } from '@/types/pestel'
 
 export function Reportes() {
+  const empresa = useAuthStore((s) => s.empresa)
+  const perfil = useAuthStore((s) => s.perfil)
+  const userId = useAuthStore((s) => s.user?.id)
   const factores = usePestelStore((s) => s.factores)
   const trmUsd = usePestelStore((s) => s.trmUsd)
   const [exportando, setExportando] = useState(false)
+  const [generando, setGenerando] = useState(false)
+  const [informeUrl, setInformeUrl] = useState<string | null>(null)
+  const [informeTexto, setInformeTexto] = useState<string | null>(null)
+  const [informes, setInformes] = useState<InformeVersion[]>([])
+  const [errorBiblioteca, setErrorBiblioteca] = useState<string | null>(null)
+  const [descargandoId, setDescargandoId] = useState<string | null>(null)
+  const aprobados = factores.filter((factor) => factor.estado === 'aprobado')
   const kpis = calcularKpis(factores)
   const dinero = exposicionEconomica(factores)
   const insights = generarInsights(factores)
   const criticos = factoresCriticos(factores)
   const resumen = resumenPorEntorno(factores)
+
+  useEffect(() => {
+    if (!empresa) return
+    void listarInformes(empresa.id)
+      .then((lista) => {
+        setInformes(lista)
+        setErrorBiblioteca(null)
+      })
+      .catch((error) => {
+        setInformes([])
+        setErrorBiblioteca(mensajeErrorSupabase(error))
+      })
+  }, [empresa])
+
+  async function handleDescargarVersion(informe: InformeVersion) {
+    setDescargandoId(informe.id)
+    try {
+      await descargarInformePdf({
+        version: informe.version,
+        texto: informe.texto,
+        metadatos: informe.metadatos,
+        fecha: formatearFecha(informe.createdAt),
+      })
+    } catch {
+      toast.error('No se pudo descargar el PDF')
+    } finally {
+      setDescargandoId(null)
+    }
+  }
+
+  async function handleInforme() {
+    if (!empresa) {
+      toast.error('No hay empresa en la sesión')
+      return
+    }
+    if (aprobados.length === 0) {
+      toast.error('Hace falta al menos un factor aprobado')
+      return
+    }
+    setGenerando(true)
+    setInformeUrl(null)
+    setInformeTexto(null)
+    try {
+      const resultado = await solicitarInformeN8n(empresa, aprobados)
+      setInformeUrl(resultado.url ?? null)
+      setInformeTexto(resultado.texto ?? null)
+      if (resultado.texto && perfil && userId) {
+        try {
+          const guardado = await guardarInforme({
+            empresaId: empresa.id,
+            userId,
+            texto: resultado.texto,
+            factores: aprobados,
+            metadatos: armarMetadatos(empresa, perfil, aprobados),
+          })
+          setInformes((lista) => [guardado, ...lista.filter((item) => item.id !== guardado.id)])
+          setErrorBiblioteca(null)
+          toast.success(`Versión ${guardado.version} guardada en la biblioteca`)
+        } catch (error) {
+          toast.error(`El análisis se generó, pero no se guardó: ${mensajeErrorSupabase(error)}`)
+        }
+      } else if (!resultado.url && !resultado.texto) {
+        toast.success('n8n recibió los factores. El informe aún no trae enlace ni texto.')
+      } else {
+        toast.success('Informe generado')
+      }
+    } catch (error) {
+      const mensaje = mensajeErrorSupabase(error)
+      toast.error(mensaje.includes('Timeout') || mensaje.includes('aborted') ? 'n8n no respondió a tiempo' : mensaje)
+    } finally {
+      setGenerando(false)
+    }
+  }
+
+  async function handleDescargarActual() {
+    if (!informeTexto || !empresa || !perfil) return
+    setDescargandoId('actual')
+    try {
+      const guardada = informes.find((item) => item.texto === informeTexto)
+      await descargarInformePdf({
+        version: guardada?.version ?? 0,
+        texto: informeTexto,
+        metadatos: guardada?.metadatos ?? armarMetadatos(empresa, perfil, aprobados),
+        fecha: guardada ? formatearFecha(guardada.createdAt) : formatearFecha(new Date().toISOString()),
+      })
+    } catch {
+      toast.error('No se pudo descargar el PDF')
+    } finally {
+      setDescargandoId(null)
+    }
+  }
 
   async function handlePdf() {
     setExportando(true)
@@ -48,10 +159,20 @@ export function Reportes() {
     }
   }
 
+  const biblioteca = (
+    <Biblioteca
+      informes={informes}
+      error={errorBiblioteca}
+      descargandoId={descargandoId}
+      onDescargar={(informe) => void handleDescargarVersion(informe)}
+    />
+  )
+
   if (factores.length === 0) {
     return (
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-6xl space-y-6">
         <Encabezado />
+        {biblioteca}
         <EmptyState
           titulo="No hay datos para reportar"
           descripcion="Registre factores PESTEL o cargue el set de ejemplo para generar el informe de gerencia."
@@ -65,7 +186,13 @@ export function Reportes() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <Encabezado />
         <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={handlePdf} disabled={exportando}>
+          {informeN8nConfigurado() ? (
+            <Button type="button" onClick={() => void handleInforme()} disabled={generando || aprobados.length === 0}>
+              {generando ? <Loader2 className="animate-spin" /> : <Sparkles />}
+              Generar análisis
+            </Button>
+          ) : null}
+          <Button type="button" variant="outline" onClick={handlePdf} disabled={exportando}>
             {exportando ? <Loader2 className="animate-spin" /> : <FileText />}
             Descargar PDF
           </Button>
@@ -93,6 +220,44 @@ export function Reportes() {
           </Button>
         </div>
       </div>
+
+      {biblioteca}
+
+      {informeUrl || informeTexto ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Informe generado</CardTitle>
+            <CardDescription>
+              Análisis de {aprobados.length} factor{aprobados.length === 1 ? '' : 'es'} aprobado
+              {aprobados.length === 1 ? '' : 's'}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {informeTexto ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={descargandoId === 'actual'}
+                onClick={() => void handleDescargarActual()}
+              >
+                {descargandoId === 'actual' ? <Loader2 className="animate-spin" /> : <Download />}
+                Descargar este PDF
+              </Button>
+            ) : null}
+            {informeTexto ? <p className="whitespace-pre-wrap text-sm leading-relaxed">{informeTexto}</p> : null}
+            {informeUrl ? (
+              <a
+                href={informeUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+              >
+                Abrir documento
+              </a>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div id="reporte-preview" className="space-y-6">
         <Card className="overflow-hidden">
@@ -260,6 +425,88 @@ export function Reportes() {
         </Card>
       </div>
     </div>
+  )
+}
+
+function mensajeBiblioteca(error: string | null): string {
+  if (!error) return 'Todavía no hay versiones guardadas.'
+  if (error.includes('schema cache') || error.includes('informes')) {
+    return 'La biblioteca todavía no está creada en la base. Publica estos cambios para que se guarden las versiones.'
+  }
+  return error
+}
+
+function Biblioteca({
+  informes,
+  error,
+  descargandoId,
+  onDescargar,
+}: {
+  informes: InformeVersion[]
+  error: string | null
+  descargandoId: string | null
+  onDescargar: (informe: InformeVersion) => void
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Biblioteca de versiones</CardTitle>
+        <CardDescription>
+          Cada análisis queda guardado con empresa, NIT, autor, rol y el conteo de factores para el auditor. No se
+          edita ni se borra.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {informes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{mensajeBiblioteca(error)}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Versión</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Autor</TableHead>
+                  <TableHead>Rol</TableHead>
+                  <TableHead>NIT</TableHead>
+                  <TableHead>Factores</TableHead>
+                  <TableHead>Niveles</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {informes.map((informe) => (
+                  <TableRow key={informe.id}>
+                    <TableCell className="font-medium">v{informe.version}</TableCell>
+                    <TableCell>{formatearFecha(informe.createdAt)}</TableCell>
+                    <TableCell>{informe.metadatos.autor}</TableCell>
+                    <TableCell>{informe.metadatos.rol}</TableCell>
+                    <TableCell>{informe.metadatos.nit}</TableCell>
+                    <TableCell>{informe.metadatos.factores}</TableCell>
+                    <TableCell className="text-xs">
+                      {informe.metadatos.porNivel?.CRÍTICO ?? 0} críticos · {informe.metadatos.porNivel?.ATENCIÓN ?? 0}{' '}
+                      atención · {informe.metadatos.porNivel?.MONITOREAR ?? 0} monitorear
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={descargandoId === informe.id}
+                        onClick={() => onDescargar(informe)}
+                      >
+                        {descargandoId === informe.id ? <Loader2 className="animate-spin" /> : <Download />}
+                        PDF
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

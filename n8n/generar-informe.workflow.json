@@ -1,0 +1,126 @@
+{
+  "name": "Lookout · Generar informe",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lookout-informe",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://lookout.jelabs.net,http://localhost:5173"
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "lookout-informe"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nconst factores = Array.isArray(body.factores) ? body.factores : [];\nconst prompt = [\n  'Eres analista de entorno externo para una empresa en Colombia.',\n  'Con los factores PESTEL aprobados redacta un informe en español, en markdown.',\n  'No inventes factores que no estén en los datos. Si falta información, dilo.',\n  '',\n  'Estructura obligatoria:',\n  '## Resumen ejecutivo',\n  '## Análisis PESTEL',\n  'Una subsección por cada categoría que tenga factores (Político, Económico, Social, Tecnológico, Ecológico, Legal).',\n  '## Prioridades',\n  'Agrupa por nivel CRÍTICO, ATENCIÓN y MONITOREAR.',\n  '## Hoja de ruta',\n  'Acciones a corto, mediano y largo plazo. Cada acción indica el factor que la origina y el resultado esperado.',\n  '',\n  'Empresa: ' + (body.empresa ?? 'Sin nombre'),\n  'NIT: ' + (body.nit ?? 'Sin NIT'),\n  'Sector: ' + (body.sectorNombre ?? body.sector ?? 'Sin sector'),\n  'Ciudad: ' + (body.ciudad ?? 'Sin ciudad'),\n  '',\n  'Factores aprobados:',\n  JSON.stringify(factores, null, 2),\n].join('\\n');\n\nreturn [{\n  json: {\n    geminiBody: {\n      contents: [{ role: 'user', parts: [{ text: prompt }] }],\n      generationConfig: { temperature: 0.4, maxOutputTokens: 8192 },\n    },\n  },\n}];"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000002",
+      "name": "Armar prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "PEGA_TU_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.geminiBody }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000003",
+      "name": "Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const parts = $json.candidates?.[0]?.content?.parts ?? [];\nconst texto = parts.map((parte) => parte.text ?? '').join('\\n').trim();\nif (!texto) {\n  throw new Error('Gemini no devolvió texto');\n}\nreturn [{ json: { texto } }];"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000004",
+      "name": "Extraer texto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ texto: $json.texto }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000005",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Armar prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar prompt": {
+      "main": [
+        [
+          {
+            "node": "Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini": {
+      "main": [
+        [
+          {
+            "node": "Extraer texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer texto": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
