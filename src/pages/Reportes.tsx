@@ -1,4 +1,4 @@
-import { Download, FileSpreadsheet, FileText, Loader2, Sparkles } from 'lucide-react'
+import { Download, FileSpreadsheet, Loader2, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { BarrasAgrupadas } from '@/components/charts/BarrasAgrupadas'
@@ -20,7 +20,6 @@ import { APP_NAME } from '@/lib/constants'
 import { copAUsd, exposicionEconomica, formatearCOP, formatearUSD, tieneValor } from '@/lib/dinero'
 import { exportarCsv } from '@/lib/exportCsv'
 import { exportarExcel } from '@/lib/exportExcel'
-import { exportarPdf } from '@/lib/exportPdf'
 import { descargarInformePdf } from '@/lib/informePdf'
 import { informeN8nConfigurado, solicitarInformeN8n } from '@/lib/informeN8n'
 import {
@@ -42,7 +41,6 @@ export function Reportes() {
   const userId = useAuthStore((s) => s.user?.id)
   const factores = usePestelStore((s) => s.factores)
   const trmUsd = usePestelStore((s) => s.trmUsd)
-  const [exportando, setExportando] = useState(false)
   const [generando, setGenerando] = useState(false)
   const [informeUrl, setInformeUrl] = useState<string | null>(null)
   const [informeTexto, setInformeTexto] = useState<string | null>(null)
@@ -112,7 +110,8 @@ export function Reportes() {
           })
           setInformes((lista) => [guardado, ...lista.filter((item) => item.id !== guardado.id)])
           setErrorBiblioteca(null)
-          toast.success(`Versión ${guardado.version} guardada en la biblioteca`)
+          toast.success(`Versión ${guardado.version} quedó en la biblioteca. El PDF se descarga desde ahí.`)
+          document.getElementById('biblioteca')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         } catch (error) {
           toast.error(`El análisis se generó, pero no se guardó: ${mensajeErrorSupabase(error)}`)
         }
@@ -126,36 +125,6 @@ export function Reportes() {
       toast.error(mensaje.includes('Timeout') || mensaje.includes('aborted') ? 'n8n no respondió a tiempo' : mensaje)
     } finally {
       setGenerando(false)
-    }
-  }
-
-  async function handleDescargarActual() {
-    if (!informeTexto || !empresa || !perfil) return
-    setDescargandoId('actual')
-    try {
-      const guardada = informes.find((item) => item.texto === informeTexto)
-      await descargarInformePdf({
-        version: guardada?.version ?? 0,
-        texto: informeTexto,
-        metadatos: guardada?.metadatos ?? armarMetadatos(empresa, perfil, aprobados),
-        fecha: guardada ? formatearFecha(guardada.createdAt) : formatearFecha(new Date().toISOString()),
-      })
-    } catch {
-      toast.error('No se pudo descargar el PDF')
-    } finally {
-      setDescargandoId(null)
-    }
-  }
-
-  async function handlePdf() {
-    setExportando(true)
-    try {
-      await exportarPdf(factores)
-      toast.success('PDF descargado')
-    } catch {
-      toast.error('No se pudo generar el PDF')
-    } finally {
-      setExportando(false)
     }
   }
 
@@ -192,10 +161,6 @@ export function Reportes() {
               Generar análisis
             </Button>
           ) : null}
-          <Button type="button" variant="outline" onClick={handlePdf} disabled={exportando}>
-            {exportando ? <Loader2 className="animate-spin" /> : <FileText />}
-            Descargar PDF
-          </Button>
           <Button
             type="button"
             variant="outline"
@@ -233,17 +198,9 @@ export function Reportes() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {informeTexto ? (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={descargandoId === 'actual'}
-                onClick={() => void handleDescargarActual()}
-              >
-                {descargandoId === 'actual' ? <Loader2 className="animate-spin" /> : <Download />}
-                Descargar este PDF
-              </Button>
-            ) : null}
+            <p className="text-sm text-muted-foreground">
+              Esta versión queda en la biblioteca. El PDF, con la hoja de ruta, se descarga desde esa fila.
+            </p>
             {informeTexto ? <p className="whitespace-pre-wrap text-sm leading-relaxed">{informeTexto}</p> : null}
             {informeUrl ? (
               <a
@@ -448,12 +405,12 @@ function Biblioteca({
   onDescargar: (informe: InformeVersion) => void
 }) {
   return (
-    <Card>
+    <Card id="biblioteca">
       <CardHeader>
         <CardTitle>Biblioteca de versiones</CardTitle>
         <CardDescription>
-          Cada análisis queda guardado con empresa, NIT, autor, rol y el conteo de factores para el auditor. No se
-          edita ni se borra.
+          Generar análisis guarda aquí la versión, con hoja de ruta y los datos del auditor. El PDF no se descarga
+          solo: se baja desde la fila.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -515,7 +472,7 @@ function Encabezado() {
     <header>
       <h1 className="text-2xl text-foreground">Reportes</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Vista previa del informe y descarga en PDF, Excel o CSV.
+        Genera el análisis y descárgalo desde la biblioteca. Excel y CSV exportan los factores.
       </p>
     </header>
   )
