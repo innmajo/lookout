@@ -72,12 +72,30 @@ export function TablaPesos({
         <tbody>
           {filas.map((sector) => {
             const activo = sector.id === sectorActivo
+            const color = sector.paleta.dark.primary
             return (
               <tr
                 key={sector.id}
-                className={cn('border-b border-border', activo && 'bg-primary/10')}
+                className={cn(
+                  'border-b border-border transition-colors',
+                  activo && 'shadow-[inset_3px_0_0_0_var(--row-accent)]',
+                )}
+                style={{
+                  // Cada fila lleva un tinte de su sector; la activa se marca más fuerte
+                  backgroundColor: activo ? `${color}33` : `${color}14`,
+                  ['--row-accent' as string]: color,
+                }}
               >
-                <td className="px-3 py-2 font-medium text-foreground">{sector.nombre}</td>
+                <td className="px-3 py-2 font-medium text-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/10"
+                      style={{ backgroundColor: color }}
+                      aria-hidden
+                    />
+                    {sector.nombre}
+                  </span>
+                </td>
                 {CATEGORIAS.map((cat) => (
                   <td key={cat} className="px-2 py-2 text-center tabular-nums">
                     {sector.pesos[cat]}

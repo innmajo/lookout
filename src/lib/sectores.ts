@@ -29,14 +29,19 @@ export interface SectorMeta {
   paleta: { dark: PaletaSector; light: PaletaSector }
 }
 
+/**
+ * Paletas bien separadas en el círculo de color (un tono por sector).
+ * Antes hidro/construcción/comercio y industria/financiero se confundían.
+ */
 export const SECTORES: Record<SectorId, SectorMeta> = {
   agro: {
     id: 'agro',
     nombre: 'Agropecuario y agroindustria',
     pesos: { Político: 20, Económico: 20, Social: 10, Tecnológico: 12, Ecológico: 25, Legal: 13 },
     paleta: {
-      dark: { primary: '#4A7C59', primaryDark: '#3D6B4C' },
-      light: { primary: '#3F6F4E', primaryDark: '#345C41' },
+      // Verde lima / campo
+      dark: { primary: '#22C55E', primaryDark: '#16A34A' },
+      light: { primary: '#15803D', primaryDark: '#166534' },
     },
   },
   hidrocarburos: {
@@ -44,8 +49,9 @@ export const SECTORES: Record<SectorId, SectorMeta> = {
     nombre: 'Hidrocarburos y minería',
     pesos: { Político: 25, Económico: 18, Social: 8, Tecnológico: 10, Ecológico: 22, Legal: 17 },
     paleta: {
-      dark: { primary: '#C17A3A', primaryDark: '#A8662E' },
-      light: { primary: '#A8662E', primaryDark: '#8F5526' },
+      // Ámbar / oro petróleo (no terracota)
+      dark: { primary: '#F59E0B', primaryDark: '#D97706' },
+      light: { primary: '#B45309', primaryDark: '#92400E' },
     },
   },
   energia: {
@@ -53,8 +59,9 @@ export const SECTORES: Record<SectorId, SectorMeta> = {
     nombre: 'Energía y servicios públicos',
     pesos: { Político: 24, Económico: 16, Social: 8, Tecnológico: 12, Ecológico: 22, Legal: 18 },
     paleta: {
-      dark: { primary: '#0E9AA7', primaryDark: '#0C838E' },
-      light: { primary: '#0C7F8A', primaryDark: '#0A6B74' },
+      // Cian eléctrico
+      dark: { primary: '#06B6D4', primaryDark: '#0891B2' },
+      light: { primary: '#0E7490', primaryDark: '#155E75' },
     },
   },
   industria: {
@@ -62,8 +69,9 @@ export const SECTORES: Record<SectorId, SectorMeta> = {
     nombre: 'Industria manufacturera',
     pesos: { Político: 12, Económico: 24, Social: 10, Tecnológico: 18, Ecológico: 16, Legal: 20 },
     paleta: {
-      dark: { primary: '#3D5A80', primaryDark: '#334C6C' },
-      light: { primary: '#334C6C', primaryDark: '#2A3F59' },
+      // Gris acero azulado
+      dark: { primary: '#64748B', primaryDark: '#475569' },
+      light: { primary: '#475569', primaryDark: '#334155' },
     },
   },
   construccion: {
@@ -71,8 +79,9 @@ export const SECTORES: Record<SectorId, SectorMeta> = {
     nombre: 'Construcción e infraestructura',
     pesos: { Político: 18, Económico: 28, Social: 10, Tecnológico: 10, Ecológico: 12, Legal: 22 },
     paleta: {
-      dark: { primary: '#C25B3A', primaryDark: '#A64D31' },
-      light: { primary: '#A64D31', primaryDark: '#8C4129' },
+      // Rojo ladrillo
+      dark: { primary: '#EF4444', primaryDark: '#DC2626' },
+      light: { primary: '#B91C1C', primaryDark: '#991B1B' },
     },
   },
   comercio: {
@@ -80,8 +89,9 @@ export const SECTORES: Record<SectorId, SectorMeta> = {
     nombre: 'Comercio, turismo y consumo',
     pesos: { Político: 12, Económico: 24, Social: 22, Tecnológico: 14, Ecológico: 10, Legal: 18 },
     paleta: {
-      dark: { primary: '#D4674A', primaryDark: '#B8573E' },
-      light: { primary: '#B8573E', primaryDark: '#9C4A34' },
+      // Fucsia / magenta (bien lejos del rojo)
+      dark: { primary: '#EC4899', primaryDark: '#DB2777' },
+      light: { primary: '#BE185D', primaryDark: '#9D174D' },
     },
   },
   financiero: {
@@ -89,8 +99,9 @@ export const SECTORES: Record<SectorId, SectorMeta> = {
     nombre: 'Servicios financieros',
     pesos: { Político: 15, Económico: 22, Social: 10, Tecnológico: 20, Ecológico: 5, Legal: 28 },
     paleta: {
-      dark: { primary: '#1E4B7A', primaryDark: '#173C62' },
-      light: { primary: '#1A4270', primaryDark: '#143456' },
+      // Azul royal
+      dark: { primary: '#3B82F6', primaryDark: '#2563EB' },
+      light: { primary: '#1D4ED8', primaryDark: '#1E40AF' },
     },
   },
   tic: {
@@ -98,8 +109,9 @@ export const SECTORES: Record<SectorId, SectorMeta> = {
     nombre: 'TIC y conocimiento',
     pesos: { Político: 12, Económico: 18, Social: 15, Tecnológico: 32, Ecológico: 5, Legal: 18 },
     paleta: {
-      dark: { primary: '#6D5CE8', primaryDark: '#5B4BD1' },
-      light: { primary: '#5B4BD1', primaryDark: '#4C3EB8' },
+      // Violeta
+      dark: { primary: '#A855F7', primaryDark: '#9333EA' },
+      light: { primary: '#7E22CE', primaryDark: '#6B21A8' },
     },
   },
 }
@@ -144,13 +156,14 @@ export function aplicarPaletaSector(tema: 'light' | 'dark', sector: SectorId) {
     root.style.setProperty('--chart-grid', hexToRgba(primary, 0.16))
     root.style.setProperty('--tooltip-border', hexToRgba(primary, 0.28))
   } else {
-    root.style.setProperty('--border', '203 213 225')
-    root.style.setProperty('--border-alpha', '0.9')
-    root.style.setProperty('--glass-border', 'rgba(226, 232, 240, 0.95)')
-    root.style.setProperty('--shell-glow-1', hexToRgba(primary, 0.34))
-    root.style.setProperty('--shell-glow-2', hexToRgba(primary, 0.22))
-    root.style.setProperty('--shell-glow-3', hexToRgba(primary, 0.16))
-    root.style.setProperty('--chart-grid', 'rgba(148, 163, 184, 0.28)')
-    root.style.setProperty('--tooltip-border', 'rgba(203, 213, 225, 0.9)')
+    // En claro se refuerza el glow para que el cambio de sector se note de inmediato
+    root.style.setProperty('--border', rgbPrimary)
+    root.style.setProperty('--border-alpha', '0.35')
+    root.style.setProperty('--glass-border', hexToRgba(primary, 0.28))
+    root.style.setProperty('--shell-glow-1', hexToRgba(primary, 0.42))
+    root.style.setProperty('--shell-glow-2', hexToRgba(primary, 0.28))
+    root.style.setProperty('--shell-glow-3', hexToRgba(primary, 0.2))
+    root.style.setProperty('--chart-grid', hexToRgba(primary, 0.22))
+    root.style.setProperty('--tooltip-border', hexToRgba(primary, 0.35))
   }
 }
